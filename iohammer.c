@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.4 2003/07/24 13:47:20 stix Exp stix $ */
+/* $Id: iohammer.c,v 1.5 2003/07/25 02:33:32 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -66,7 +66,7 @@
 
 #include "common.h"
 
-static char const rcsid[] = "$Id: iohammer.c,v 1.4 2003/07/24 13:47:20 stix Exp stix $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.5 2003/07/25 02:33:32 stix Exp stix $";
 
 /* Prototypes */
 static void	*doIO(void *);
@@ -92,7 +92,7 @@ static int *pipe_ctl_r, *pipe_ctl_w, *pipe_cnt_r, *pipe_cnt_w;
 int
 main(int argc, char **argv)
 {
-	int i, c, writePct;
+	int c, i, unformatted, writePct;
 	int64_t fileSize;
 	float secs;
 	struct timeval startTime, endTime;
@@ -110,29 +110,21 @@ main(int argc, char **argv)
 
 	/* Set defaults */
 	blockSize = 512;
-	numio = 0;
-	fileSize = 1048576L;
-	writePct = 0;
-	type = ALPHADATA;
-	threads = 8;
-	ignore = 0;
 	strncpy(fileName, ".", sizeof(fileName)-1);
+	fileSize = 1048576L;
+	ignore = 0;
+	numio = 0;
+	threads = 8;
+	type = ALPHADATA;
+	unformatted = 0;
+	writePct = 0;
 
 	aborted = 0;
 
-	while ((c = getopt(argc, argv, "raib:c:w:t:s:f:?")) != EOF) {
+	while ((c = getopt(argc, argv, "raiub:c:w:t:s:f:?")) != EOF) {
 		switch (c) {
 		case 'a':
 			type = ALPHADATA;
-			break;
-		case 'r':
-			type = RANDDATA;
-			break;
-		case 'i':
-			ignore = 1;
-			break;
-		case 'f':
-			strncpy(fileName, optarg, sizeof(fileName));
 			break;
 		case 'b':
 			blockSize = getnum(optarg);
@@ -140,11 +132,23 @@ main(int argc, char **argv)
 		case 'c':
 			iolimit = getnum(optarg);
 			break;
+		case 'f':
+			strncpy(fileName, optarg, sizeof(fileName));
+			break;
+		case 'i':
+			ignore = 1;
+			break;
+		case 'r':
+			type = RANDDATA;
+			break;
 		case 's':
 			fileSize = getnum(optarg);
 			break;
 		case 't':
 			threads = atoi(optarg);
+			break;
+		case 'u':
+			unformatted = 1;
 			break;
 		case 'w':
 			writePct = atoi(optarg);
@@ -160,8 +164,10 @@ main(int argc, char **argv)
 
 	openfile(&fds, fileName, &fileSize, threads, writePct == 0 ?
 	    O_RDONLY : O_RDWR);
-	printf("Size %lld: ", fileSize);
-	fflush(stdout);
+	if (!unformatted) {
+		printf("Size %lld: ", fileSize);
+		fflush(stdout);
+	}
 
 	writeLim = (writePct << 10) / 100;
 	fileBlocks = fileSize / blockSize;
@@ -290,10 +296,16 @@ main(int argc, char **argv)
 	MYASSERT(gettimeofday(&endTime, NULL) == 0, "gettimeofday failed");
 	secs = endTime.tv_sec + endTime.tv_usec / 1000000.0
 	    - startTime.tv_sec - startTime.tv_usec / 1000000.0;
-	printf("%.3f secs, %lld IOs, %lld writes, ", secs, numio,
-	    numWrites);
-	printf("%.1f IOs/sec, %.2f ms average seek\n", numio / secs,
-	    secs / numio * 1000.0);
+	if (unformatted) {
+		printf("%lld\t%d\t%ld\t%d\t%lld\t%lld\t%f\t%f\n", fileSize,
+		    threads, blockSize, writePct, numio, numWrites, secs,
+		    numio / secs);
+	} else {
+		printf("%.3f secs, %lld IOs, %lld writes, ", secs, numio,
+		    numWrites);
+		printf("%.1f IOs/sec, %.2f ms average seek\n", numio / secs,
+		    secs / numio * 1000.0);
+	}
 
 	if (aborted)
 		for (i = 0; i < threads; i++)
@@ -510,8 +522,8 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "iohammer version $Revision: 1.4 $.\n"
-	    "Copyright Paul Ripke $Date: 2003/07/24 13:47:20 $\n");
+	fprintf(stderr, "iohammer version $Revision: 1.5 $.\n"
+	    "Copyright Paul Ripke $Date: 2003/07/25 02:33:32 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else
@@ -531,6 +543,8 @@ usage()
 	fprintf(stderr, "  -w write%%   Integer percentage of operations to be "
 	    "writes\n");
 	fprintf(stderr, "  -t threads  Number of threads to do I/O\n");
+	fprintf(stderr, "  -u          Unformatted output. Write tab-separted "
+	    "figures\n");
 	fprintf(stderr, "  -s size     Size of file/device to create/use\n");
 	fprintf(stderr, "              Specify '0' to attempt to find the "
 	    "size of file/device\n");
@@ -538,6 +552,9 @@ usage()
 	    "or device\n");
 	fprintf(stderr, "              If directory, a temporary file is "
 	    "created\n\n");
+	fprintf(stderr, "Unformatted output, order is:\n");
+	fprintf(stderr, "  size, threads, blocksize, write-pct, count, "
+	    "writes, seconds, rate\n\n");
 	fprintf(stderr, "Compiled defaults:\n");
 	fprintf(stderr, "    iohammer -a -b 1s -c 0 -w 0 -s 1m -f .\n\n");
 	fprintf(stderr, "  Numeric arguments take an optional "
