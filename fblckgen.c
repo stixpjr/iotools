@@ -1,4 +1,4 @@
-/* $Id: fblckgen.c,v 1.4 2003/07/22 13:57:24 stix Exp stix $ */
+/* $Id: fblckgen.c,v 1.5 2003/07/24 12:50:23 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -54,7 +54,7 @@
 
 #include "common.h"
 
-static char const rcsid[] = "$Id: fblckgen.c,v 1.4 2003/07/22 13:57:24 stix Exp stix $";
+static char const rcsid[] = "$Id: fblckgen.c,v 1.5 2003/07/24 12:50:23 stix Exp stix $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);
@@ -269,8 +269,8 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "fblckgen version $Revision: 1.4 $\n"
-	    "Copyright Paul Ripke $Date: 2003/07/22 13:57:24 $\n");
+	fprintf(stderr, "fblckgen version " VERSION ".\n"
+	    "Copyright Paul Ripke $Date: 2003/07/24 12:50:23 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else   
