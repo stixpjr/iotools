@@ -1,4 +1,4 @@
-/* $Id$ */
+/* $Id: fblckgen.c,v 1.1 2003/07/17 23:46:42 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -64,7 +64,7 @@
 		exit(1);				\
 	}
 
-static char const rcsid[] = "$Id$";
+static char const rcsid[] = "$Id: fblckgen.c,v 1.1 2003/07/17 23:46:42 stix Exp stix $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);
@@ -74,14 +74,15 @@ static void	usage();
 /* Globals */
 static char *buf[2];
 static int type;
-volatile static int aborted;
+static volatile int aborted;
 static long blockSize;
 static int64_t numBlocks;
 
 #ifdef USE_PTHREADS
 static pthread_mutex_t lock;
-static pthread_cond_t cond;
-volatile static int waiters;
+static pthread_cond_t less;
+static pthread_cond_t more;
+static volatile int nblocks;
 #else
 static int ctl1[2], ctl2[2];
 #endif
@@ -143,10 +144,12 @@ main(int argc, char **argv)
 	buf[1] = (char *)buffer + blockSize;
 	aborted = 0;
 #ifdef USE_PTHREADS
-	waiters = 0;
+	nblocks = 0;
 	myassert(pthread_mutex_init(&lock, NULL) == 0,
 	    "pthread_mutex_init failed");
-	myassert(pthread_cond_init(&cond, NULL) == 0,
+	myassert(pthread_cond_init(&less, NULL) == 0,
+	    "pthread_cond_init failed");
+	myassert(pthread_cond_init(&more, NULL) == 0,
 	    "pthread_cond_init failed");
 	myassert(pthread_attr_init(&attr) == 0,
 	    "pthread_attr_init failed");
@@ -185,15 +188,9 @@ main(int argc, char **argv)
 #ifdef USE_PTHREADS
 		myassert(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
-		if (waiters > 0) {
-			waiters--;
-			myassert(pthread_cond_signal(&cond) == 0,
-			    "pthread_cond_signal failed");
-		} else {
-			waiters++;
-			myassert(pthread_cond_wait(&cond, &lock) == 0,
+		while (nblocks == 0)
+			myassert(pthread_cond_wait(&more, &lock) == 0,
 			    "pthread_cond_wait failed");
-		}
 		myassert(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock failed");
 #else
@@ -223,6 +220,16 @@ main(int argc, char **argv)
 			    (int64_t)i);
 			break;
 		}
+#ifdef USE_PTHREADS
+		myassert(pthread_mutex_lock(&lock) == 0,
+		    "pthread_mutex_lock failed");
+		nblocks--;
+		myassert(pthread_cond_signal(&less) == 0,
+		    "pthread_cond_signal failed");
+		myassert(pthread_mutex_unlock(&lock) == 0,
+		    "pthread_mutex_unlock failed");
+#endif
+		
 	}
 	if (gettimeofday(&tpend, NULL) != 0) {
 		perror("gettimeofday failed");
@@ -253,19 +260,22 @@ makeBlocks(void *dummy)
 
 	SRAND(time(NULL));
 	for (i = 0; numBlocks == 0 || i < numBlocks; i++) {
+#ifdef USE_PTHREADS
+		myassert(pthread_mutex_lock(&lock) == 0,
+		    "pthread_mutex_lock failed");
+		while (nblocks > 1)
+			myassert(pthread_cond_wait(&less, &lock) == 0,
+			    "pthread_cond_wait failed");
+		myassert(pthread_mutex_unlock(&lock) == 0,
+		    "pthread_mutex_unlock");
+#endif
 		initblock(buf[i & 1], blockSize, type, i);
 #ifdef USE_PTHREADS
 		myassert(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
-		if (waiters > 0) {
-			waiters--;
-			myassert(pthread_cond_signal(&cond) == 0,
-			    "pthread_cond_signal failed");
-		} else {
-			waiters++;
-			myassert(pthread_cond_wait(&cond, &lock) == 0,
-			    "pthread_cond_wait failed");
-		}
+		nblocks++;
+		myassert(pthread_cond_signal(&more) == 0,
+		    "pthread_cond_signal failed");
 		myassert(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock");
 #else
@@ -291,8 +301,8 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "fblckgen version $Revision$\n"
-	    "Copyright Paul Ripke $Date$\n\n");
+	fprintf(stderr, "fblckgen version $Revision: 1.1 $\n"
+	    "Copyright Paul Ripke $Date: 2003/07/17 23:46:42 $\n\n");
 	fprintf(stderr, "Usage: fblckgen [-a | -r] [-b bytes] "
 	    "[-c count]\n\n");
 	fprintf(stderr, "  -a          Write blocks of a repeating ASCII "
