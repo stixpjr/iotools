@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.2 2003/07/24 09:02:51 stix Exp stix $ */
+/* $Id: iohammer.c,v 1.3 2003/07/24 12:51:01 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -65,10 +65,11 @@
 
 #include "common.h"
 
-static char const rcsid[] = "$Id: iohammer.c,v 1.2 2003/07/24 09:02:51 stix Exp stix $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.3 2003/07/24 12:51:01 stix Exp stix $";
 
 /* Prototypes */
 static void	*doIO(void *);
+static void	cleanup(int);
 static void	usage();
 static void	openfile(int **fds, char *name, int64_t *size,
 		    int threads, int access);
@@ -101,7 +102,7 @@ main(int argc, char **argv)
 #else
 	char tok;
 	int fdmax, p[2];
-	pid_t pid;
+	pid_t *pid;
 	fd_set rdset;
 	struct timeval tmout;
 #endif
@@ -163,8 +164,10 @@ main(int argc, char **argv)
 
 	writeLim = (writePct << 10) / 100;
 	fileBlocks = fileSize / blockSize;
-	if (threads > iolimit)
+	if (iolimit > 0 && threads > iolimit)
 		threads = iolimit;
+
+	signal(SIGINT, &cleanup);
 
 #ifdef USE_PTHREADS
 	MYASSERT((tid = malloc(threads * sizeof(pthread_t))) != NULL,
@@ -184,8 +187,20 @@ main(int argc, char **argv)
 	}
 	MYASSERT(pthread_attr_destroy(&attr) == 0,
 	    "pthread_attr_destroy failed");
-	gettimeofday(&startTime, NULL);
+
+	MYASSERT(gettimeofday(&startTime, NULL) == 0, "gettimeofday failed");
+
+	/* wait for the threads to finish */
+	MYASSERT(pthread_mutex_lock(&lock) == 0,
+	    "pthread_mutex_lock failed");
+	while ((iolimit == 0 || numio < iolimit) && !aborted)
+		MYASSERT(pthread_cond_wait(&cond, &lock) == 0,
+		    "pthread_cond_wait failed");
+	MYASSERT(pthread_mutex_unlock(&lock) == 0,
+	    "pthread_mutex_unlock failed");
 #else
+	MYASSERT((pid = malloc(threads * sizeof(pid_t))) != NULL,
+	    "malloc failed");
 	MYASSERT((pipe_ctl_r = (int *) malloc(threads * sizeof(int))) != NULL,
 	    "malloc failed");
 	MYASSERT((pipe_ctl_w = (int *) malloc(threads * sizeof(int))) != NULL,
@@ -201,12 +216,13 @@ main(int argc, char **argv)
 		MYASSERT(pipe((int *) &p) == 0, "pipe failed");
 		pipe_cnt_r[i] = p[0];
 		pipe_cnt_w[i] = p[1];
-		switch (pid = fork()) {
+		switch (pid[i] = fork()) {
 		case -1:
 			perror("fork failed");
 			exit(1);
 			break;
 		case 0:		/* child */
+			signal(SIGINT, SIG_IGN);
 			close(pipe_ctl_w[i]);
 			close(pipe_cnt_r[i]);
 			doIO((void *)i);
@@ -218,22 +234,11 @@ main(int argc, char **argv)
 		}
 		
 	}
-#endif
 
-#ifdef USE_PTHREADS
-	/* wait for the threads to finish */
-	MYASSERT(pthread_mutex_lock(&lock) == 0,
-	    "pthread_mutex_lock failed");
-	while ((iolimit == 0 || numio < iolimit) && !aborted)
-		MYASSERT(pthread_cond_wait(&cond, &lock) == 0,
-		    "pthread_cond_wait failed");
-	MYASSERT(pthread_mutex_unlock(&lock) == 0,
-	    "pthread_mutex_unlock failed");
-#else
 	/* kick start all the children */
 	tok = 1;
 	fdmax = 0;
-	gettimeofday(&startTime, NULL);
+	MYASSERT(gettimeofday(&startTime, NULL) == 0, "gettimeofday failed");
 	for (i = 0; i < threads && (iolimit == 0 ||
 	    numio < iolimit); i++) {
 		MYASSERT(write(pipe_ctl_w[i], &tok, 1) == 1,
@@ -250,11 +255,13 @@ main(int argc, char **argv)
 		tmout.tv_sec = 10;
 		tmout.tv_usec = 0;
 		switch(select(fdmax, &rdset, NULL, NULL, &tmout)) {
-		case -1:
-			perror("select call failed");
-			_exit(1);
 		case 0:
 			break;
+		case -1:
+			if (errno != EINTR) {
+				aborted = 1;
+				perror("select call failed");
+			}		/* fallthru */
 		default:
 			for (i = 0; i < threads; i++)
 				if (pipe_cnt_r[i] >= 0 &&
@@ -279,13 +286,21 @@ main(int argc, char **argv)
 		}
 	}
 #endif
-	gettimeofday(&endTime, NULL);
+	MYASSERT(gettimeofday(&endTime, NULL) == 0, "gettimeofday failed");
 	secs = endTime.tv_sec + endTime.tv_usec / 1000000.0
 	    - startTime.tv_sec - startTime.tv_usec / 1000000.0;
 	printf("%.3f secs, %lld IOs, %lld writes, ", secs, numio,
 	    numWrites);
 	printf("%.1f IOs/sec, %.2f ms average seek\n", numio / secs,
 	    secs / numio * 1000.0);
+
+	if (aborted)
+		for (i = 0; i < threads; i++)
+#ifdef USE_PTHREADS
+			pthread_cancel(tid[i]);
+#else
+			kill(pid[i], SIGTERM);
+#endif
 	exit(0);
 }
 
@@ -304,7 +319,7 @@ doIO(void *arg)
 		fprintf(stderr, "malloc for %ld bytes failed.", blockSize);
 		exit(1);
 	}
-	gettimeofday(&tmout, NULL);
+	MYASSERT(gettimeofday(&tmout, NULL) == 0, "gettimeofday failed");
 	writeFlag = 0;
 #ifdef USE_PTHREADS
 	seed = tmout.tv_usec ^ tmout.tv_sec ^ (long)&seed;
@@ -494,8 +509,8 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "iohammer version $Revision: 1.2 $.\n"
-	    "Copyright Paul Ripke $Date: 2003/07/24 09:02:51 $\n");
+	fprintf(stderr, "iohammer version $Revision: 1.3 $.\n"
+	    "Copyright Paul Ripke $Date: 2003/07/24 12:51:01 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else
