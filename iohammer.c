@@ -1,4 +1,4 @@
-/* $Id$ */
+/* $Id: iohammer.c,v 1.1 2003/07/23 14:52:04 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -65,12 +65,12 @@
 
 #include "common.h"
 
-static char const rcsid[] = "$Id$";
+static char const rcsid[] = "$Id: iohammer.c,v 1.1 2003/07/23 14:52:04 stix Exp stix $";
 
 /* Prototypes */
 static void	*doIO(void *);
 static void	usage();
-static void	openfile(int **fds, char *name, u_int64_t *size,
+static void	openfile(int **fds, char *name, int64_t *size,
 		    int threads, int access);
 
 /* Globals */
@@ -83,7 +83,6 @@ static volatile int64_t numio, numWrites;
 #ifdef USE_PTHREADS
 static pthread_mutex_t lock;
 static pthread_cond_t cond;
-static volatile int waiters;
 #else
 static int *pipe_ctl_r, *pipe_ctl_w, *pipe_cnt_r, *pipe_cnt_w;
 #endif
@@ -97,8 +96,7 @@ main(int argc, char **argv)
 	struct timeval startTime, endTime;
 	char fileName[PATH_MAX];
 #ifdef USE_PTHREADS
-	pthread_t tid;
-	pthread_attr_t attr;
+	pthread_t *tid;
 #else
 	char tok;
 	int fdmax, p[2];
@@ -159,28 +157,25 @@ main(int argc, char **argv)
 
 	openfile(&fds, fileName, &fileSize, threads, writePct == 0 ?
 	    O_RDONLY : O_RDWR);
-	printf("Size %llu: ", fileSize);
+	printf("Size %lld: ", fileSize);
 	fflush(stdout);
 
 	writeLim = (writePct << 10) / 100;
 	fileBlocks = fileSize / blockSize;
+	if (threads > iolimit)
+		threads = iolimit;
 
 #ifdef USE_PTHREADS
-	waiters = 0;
+	MYASSERT((tid = malloc(threads * sizeof(pthread_t))) != NULL,
+	    "malloc failed");
 	MYASSERT(pthread_mutex_init(&lock, NULL) == 0,
 	    "pthread_mutex_init failed");
 	MYASSERT(pthread_cond_init(&cond, NULL) == 0,
 	    "pthread_cond_init failed");
-	MYASSERT(pthread_attr_init(&attr) == 0, "pthread_attr_init failed");
-	MYASSERT(pthread_attr_setdetachstate(&attr,
-	    PTHREAD_CREATE_DETACHED) == 0,
-	    "pthread_attr_setdetachstate failed");
 	for (i = 0; i < threads; i++) {
-		MYASSERT(pthread_create(&tid, &attr, &doIO, (void *)i) == 0,
+		MYASSERT(pthread_create(&tid[i], NULL, &doIO, (void *)i) == 0,
 		    "pthread_create failed");
 	}
-	MYASSERT(pthread_attr_destroy(&attr) == 0,
-	    "pthread_attr_destroy failed");
 #else
 	MYASSERT((pipe_ctl_r = (int *) malloc(threads * sizeof(int))) != NULL,
 	    "malloc failed");
@@ -216,22 +211,10 @@ main(int argc, char **argv)
 	}
 #endif
 
-#ifdef USE_PTHREADS
-	/* kick start all the threads */
-	/* first wait for all the threads to start */
-	MYASSERT(pthread_mutex_lock(&lock) == 0,
-	    "pthread_mutex_lock failed");
-	while (waiters < threads && !aborted)
-		MYASSERT(pthread_cond_wait(&cond, &lock) == 0,
-		    "pthread_cond_wait failed");
 	gettimeofday(&startTime, NULL);
-	waiters++;
-	MYASSERT(pthread_cond_broadcast(&cond) == 0,
-	    "pthread_cond_broadcast failed");
-	MYASSERT(pthread_mutex_unlock(&lock) == 0,
-	    "pthread_mutex_unlock failed");
 
-	/* now wait for them to finish */
+#ifdef USE_PTHREADS
+	/* wait for the threads to finish */
 	MYASSERT(pthread_mutex_lock(&lock) == 0,
 	    "pthread_mutex_lock failed");
 	while ((iolimit == 0 || numio < iolimit) && !aborted)
@@ -239,9 +222,11 @@ main(int argc, char **argv)
 		    "pthread_cond_wait failed");
 	MYASSERT(pthread_mutex_unlock(&lock) == 0,
 	    "pthread_mutex_unlock failed");
+	for (i = 0; i < threads; i++) {
+		MYASSERT(pthread_join(tid[i], NULL) == 0,
+		    "pthread_join failed");
+	}
 #else
-	gettimeofday(&startTime, NULL);
-
 	/* kick start all the children */
 	tok = 1;
 	fdmax = 0;
@@ -303,6 +288,7 @@ main(int argc, char **argv)
 static void *
 doIO(void *arg)
 {
+	int thrnumio = 0;
 	char tok;
 	int writeFlag, tid;
 	long seed;
@@ -324,22 +310,6 @@ doIO(void *arg)
 #endif
 	SRAND(seed);
 	srandom(seed);
-#ifdef USE_PTHREADS
-	/* Increment thread count and signal main */
-	/* Wait until main thread tells us to go */
-	MYASSERT(pthread_mutex_lock(&lock) == 0,
-	    "pthread_mutex_lock failed");
-	waiters++;
-	if (waiters == threads)
-		MYASSERT(pthread_cond_signal(&cond) == 0,
-		    "pthread_cond_signal failed");
-	else
-		while (waiters <= threads && !aborted)
-			MYASSERT(pthread_cond_wait(&cond, &lock) == 0,
-			    "pthread_cond_wait failed");
-	MYASSERT(pthread_mutex_unlock(&lock) == 0,
-	    "pthread_mutex_unlock failed");
-#endif
 	for (;;) {
 		pos = random() % fileBlocks * blockSize;
 		if ((RAND() & 0x03ff) < writeLim) {	/* write */
@@ -353,6 +323,7 @@ doIO(void *arg)
 		if (aborted || (iolimit > 0 && numio == iolimit))
 			break;		/* finished */
 		numio++;
+		thrnumio++;
 		if (writeFlag)
 			numWrites++;
 		MYASSERT(pthread_mutex_unlock(&lock) == 0,
@@ -376,9 +347,9 @@ doIO(void *arg)
 			tok = 0;
 		}
 		if (ioRet != blockSize) {
-			fprintf(stderr, "%s I/O failed, offset %llu: %d (%s)\n",
+			fprintf(stderr, "%s I/O failed, offset %lld: %d (%s)\n",
 			    writeFlag ? "write" : "read",
-			    pos, errno, strerror(errno));
+			    (int64_t)pos, errno, strerror(errno));
 			if (!ignore) {
 				aborted = 1;
 				_exit(1);
@@ -400,11 +371,11 @@ doIO(void *arg)
 
 
 static void
-openfile(int **fds, char *name, u_int64_t *size, int threads, int access)
+openfile(int **fds, char *name, int64_t *size, int threads, int access)
 {
 	struct stat sb;
 	int fd, i, isTemp;
-	u_int64_t fileSize;
+	int64_t fileSize;
 	char *blck;
 #ifdef __APPLE__
 	long blocks, blkSize;
@@ -424,7 +395,7 @@ openfile(int **fds, char *name, u_int64_t *size, int threads, int access)
 			exit(1);
 		}
 		isTemp = 1;
-		strcat(name, "/iohammer.XXXXX");
+		strcat(name, "/iohammer.XXXXXX");
 		fd = mkstemp(name);
 		if (fd < 0) {
 			fprintf(stderr, "Failed to create file '%s': %s\n",
@@ -478,6 +449,7 @@ openfile(int **fds, char *name, u_int64_t *size, int threads, int access)
 			}
 		}
 		fsync(fd);
+		free(blck);
 	} else {
 		/* Find the size of the file/device */
 		fileSize = sb.st_size;
@@ -499,7 +471,7 @@ openfile(int **fds, char *name, u_int64_t *size, int threads, int access)
 				    "%s\n", strerror(errno));
 				exit(1);
 			}
-			*size = ((u_int64_t) blocks) * blkSize;
+			*size = ((int64_t)blocks) * blkSize;
 		}
 #endif
 	}
@@ -516,8 +488,8 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "iohammer version $Revision$.\n"
-	    "Copyright Paul Ripke $Date$\n\n");
+	fprintf(stderr, "iohammer version $Revision: 1.1 $.\n"
+	    "Copyright Paul Ripke $Date: 2003/07/23 14:52:04 $\n\n");
 	fprintf(stderr, "Usage: iohammer [-a | -r] [-i] [-b size] "
 	    "[-c count] [-w write%%]\n");
 	fprintf(stderr, "                [-t threads] [-s size] "
