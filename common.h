@@ -1,4 +1,4 @@
-/* $Id$ */
+/* $Id: common.h,v 1.1 2003/07/17 23:50:49 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -33,6 +33,18 @@
 
 #ifndef _COMMON_H_
 #define _COMMON_H_
+
+/*
+ * Custom assert which won't be disabled with "NDEBUG".
+ */
+#define MYASSERT(expr, err)				\
+do {							\
+	if (!(expr)) {					\
+		aborted = 1;				\
+		perror(err);				\
+		_exit(1);				\
+	}						\
+} while (/* CONSTCOND */ 0)
 
 typedef enum { ALPHADATA, RANDDATA } dataType;
 
