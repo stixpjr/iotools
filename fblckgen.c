@@ -1,4 +1,4 @@
-/* $Id: fblckgen.c,v 1.5 2003/07/24 12:50:23 stix Exp stix $ */
+/* $Id: fblckgen.c,v 1.6 2003/10/12 05:53:47 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -54,7 +54,7 @@
 
 #include "common.h"
 
-static char const rcsid[] = "$Id: fblckgen.c,v 1.5 2003/07/24 12:50:23 stix Exp stix $";
+static char const rcsid[] = "$Id: fblckgen.c,v 1.6 2003/10/12 05:53:47 stix Exp stix $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);
@@ -211,7 +211,7 @@ main(int argc, char **argv)
 	MYASSERT(gettimeofday(&tpend, NULL) == 0, "gettimeofday failed");
 	duration = tpend.tv_sec + tpend.tv_usec / 1000000.0 -
 	    tpstart.tv_sec - tpstart.tv_usec / 1000000.0;
-	fprintf(stderr, "%lld bytes written in %.3f secs (%.3f KB/sec)\n",
+	fprintf(stderr, "%lld bytes written in %.3f secs (%.3f KiB/sec)\n",
 	    (int64_t)i * blockSize,
 	    duration, (float)i * blockSize / duration / 1024.0);
 	if (aborted)
@@ -270,7 +270,7 @@ static void
 usage()
 {
 	fprintf(stderr, "fblckgen version " VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2003/07/24 12:50:23 $\n");
+	    "Copyright Paul Ripke $Date: 2003/10/12 05:53:47 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else   
