@@ -1,0 +1,62 @@
+  $Id$
+
+  iotools
+
+  Paul Ripke stix@stix.homeunix.net, http://stix.homeunix.net:8080/software/
+
+INTRODUCTION
+
+iotools consists of two simple programs:
+
+  fblckgen: "Fast Block Generator" - generates blocks of data, either a
+	repeating ascii sequence which is very compressible, or a pseudo-
+	random binary sequence, which, although very simple, does not
+	compress. Very handy for benchmarking tape drives, or just making a
+	sized lump of data. By using double buffering and either pthreads
+	or multiple processes, it can generally keep a tape drive busy.
+	E.g. On an AIX box, with IBM 3580 Ultrium fiber attached drives:
+		ksh$ fblckgen -a -b 256k -c 4k > /dev/rmt1.1
+		1073741824 bytes written in 28.134 secs (37270.292 KiB/sec)
+		ksh$ fblckgen -r -b 256k -c 4k > /dev/rmt1.1
+		1073741824 bytes written in 71.960 secs (14571.677 KiB/sec)
+	And to demonstrate compressibility, on my aging Mac OS X laptop:
+		ksh$ fblckgen -a -b 256k -c 40 | gzip -9v > /dev/null
+		10485760 bytes written in 2.071 secs (4944.402 KiB/sec)
+		 99.6%
+		ksh$ fblckgen -r -b 256k -c 40 | gzip -9v > /dev/null
+		10485760 bytes written in 7.588 secs (1349.425 KiB/sec)
+		  0.0%
+	Used in "random" mode, it can be used to find the approximate
+	native capacity of a given tape. E.g. On my NetBSD system, with
+	a AIT-1 drive (SONY SDX-300C) and 170m tape:
+		ksh$ fblckgen -r -b 64k -c 640k > /dev/nrst1
+		Write failed: Input/output error
+		-1 bytes, 348667 full blocks written.
+		22850240512 bytes written in 8016.739 secs (2783.512 KiB/sec)
+
+
+  iohammer:
+	It does what it says - very similar to a tool named "rawio" floating
+	out on the 'net. Using multiple threads (either pthreads or multiple
+	processes) iohammer will issue random I/Os, with a percentage based
+	write ratio to a file or raw device. Good for comparing different
+	disk layouts (RAID5, RAID0, RAID1, RAID0+1, RAID3, etc), stripe
+	unit sizes, and general disk random I/O performance. Very good to
+	see the difference the queue_depth parameter makes under AIX!
+
+BUILDING
+
+Examine and edit the Makefile! This doesn't use autoconf (yet), and whether
+it will or not in the future, I don't know. The Makefile should be fairly
+self-explainatory, the main "toggle" being whether or not to build using
+pthreads. As the Makefile says, you must have a true kernel thread based
+pthread library - GNU pth just won't work. The code has been written mainly
+under Darwin 6.6 (Mac OS X 10.2.6) and NetBSD-current (2003-05-13), and
+tested under Linux, Solaris, AIX and Tru64.
+
+Both tools will be built through the default target via "make". There is no
+"install" target! Copy the resulting executables where you will.
+
+TODO
+
+- autoconf - is it really worth it? Probably...
