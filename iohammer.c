@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.5 2003/07/25 02:33:32 stix Exp stix $ */
+/* $Id: iohammer.c,v 1.6 2003/07/28 01:42:21 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -66,7 +66,7 @@
 
 #include "common.h"
 
-static char const rcsid[] = "$Id: iohammer.c,v 1.5 2003/07/25 02:33:32 stix Exp stix $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.6 2003/07/28 01:42:21 stix Exp $";
 
 /* Prototypes */
 static void	*doIO(void *);
@@ -146,6 +146,12 @@ main(int argc, char **argv)
 			break;
 		case 't':
 			threads = atoi(optarg);
+			if (threads <= 0) {
+				fprintf(stderr, "Invalid number of "
+				    "threads: %d\n", threads);
+				usage();
+				exit(1);
+			}
 			break;
 		case 'u':
 			unformatted = 1;
@@ -522,8 +528,8 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "iohammer version $Revision: 1.5 $.\n"
-	    "Copyright Paul Ripke $Date: 2003/07/25 02:33:32 $\n");
+	fprintf(stderr, "iohammer version " VERSION ".\n"
+	    "Copyright Paul Ripke $Date: 2003/07/28 01:42:21 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else
@@ -538,7 +544,7 @@ usage()
 	fprintf(stderr, "  -r          Write blocks of binary 'random' data\n");
 	fprintf(stderr, "  -i          Ignore I/O errors and continue\n");
 	fprintf(stderr, "  -b bytes    Set write blocksize\n");
-	fprintf(stderr, "  -c count    Number of blocks to write "
+	fprintf(stderr, "  -c count    Number of blocks to read/write "
 	    "(zero for infinite)\n");
 	fprintf(stderr, "  -w write%%   Integer percentage of operations to be "
 	    "writes\n");
