@@ -1,4 +1,4 @@
-/* $Id: fblckgen.c,v 1.1 2003/07/17 23:46:42 stix Exp stix $ */
+/* $Id: fblckgen.c,v 1.2 2003/07/22 12:52:51 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -54,17 +54,7 @@
 
 #include "common.h"
 
-/*
- * Custom assert which won't be disabled with "NDEBUG".
- */
-#define myassert(expr, err)				\
-	if (!(expr)) {					\
-		aborted = 1;				\
-		perror(err);				\
-		exit(1);				\
-	}
-
-static char const rcsid[] = "$Id: fblckgen.c,v 1.1 2003/07/17 23:46:42 stix Exp stix $";
+static char const rcsid[] = "$Id: fblckgen.c,v 1.2 2003/07/22 12:52:51 stix Exp stix $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);
@@ -145,32 +135,26 @@ main(int argc, char **argv)
 	aborted = 0;
 #ifdef USE_PTHREADS
 	nblocks = 0;
-	myassert(pthread_mutex_init(&lock, NULL) == 0,
+	MYASSERT(pthread_mutex_init(&lock, NULL) == 0,
 	    "pthread_mutex_init failed");
-	myassert(pthread_cond_init(&less, NULL) == 0,
+	MYASSERT(pthread_cond_init(&less, NULL) == 0,
 	    "pthread_cond_init failed");
-	myassert(pthread_cond_init(&more, NULL) == 0,
+	MYASSERT(pthread_cond_init(&more, NULL) == 0,
 	    "pthread_cond_init failed");
-	myassert(pthread_attr_init(&attr) == 0,
+	MYASSERT(pthread_attr_init(&attr) == 0,
 	    "pthread_attr_init failed");
-	myassert(pthread_attr_setdetachstate(&attr,
+	MYASSERT(pthread_attr_setdetachstate(&attr,
 	    PTHREAD_CREATE_DETACHED) == 0, "pthread_attr_setdetachstate failed");
-	myassert(pthread_create(&tid, &attr, &makeBlocks, NULL) == 0,
+	MYASSERT(pthread_create(&tid, &attr, &makeBlocks, NULL) == 0,
 	    "pthread_create failed");
-	myassert(pthread_attr_destroy(&attr) == 0,
+	MYASSERT(pthread_attr_destroy(&attr) == 0,
 	    "pthread_attr_destroy failed");
 #else
-	if (pipe(&ctl1[0]) == -1) {
-		perror("pipe failed");
-		exit(1);
-	}
-	if (pipe(&ctl2[0]) == -1) {
-		perror("pipe failed");
-		exit(1);
-	}
+	MYASSERT(pipe(&ctl1[0]) == 0, "pipe failed");
+	MYASSERT(pipe(&ctl2[0]) == 0, "pipe failed");
 	if ((pid = fork()) == -1) {
 		perror("fork failed");
-		exit(1);
+		_exit(1);
 	}
 	if (pid == 0) {
 		signal(SIGINT, SIG_IGN);
@@ -179,31 +163,22 @@ main(int argc, char **argv)
 	}
 #endif
 	signal(SIGINT, &cleanup);
-	if (gettimeofday(&tpstart, NULL) != 0) {
-		perror("gettimeofday failed");
-		exit(1);
-	}
+	MYASSERT(gettimeofday(&tpstart, NULL) == 0, "gettimeofday failed");
 	for (i = 0; !aborted && (numBlocks == 0 || i < numBlocks); i++) {
 		/* wait for block of data */
 #ifdef USE_PTHREADS
-		myassert(pthread_mutex_lock(&lock) == 0,
+		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
 		while (nblocks == 0)
-			myassert(pthread_cond_wait(&more, &lock) == 0,
+			MYASSERT(pthread_cond_wait(&more, &lock) == 0,
 			    "pthread_cond_wait failed");
-		myassert(pthread_mutex_unlock(&lock) == 0,
+		MYASSERT(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock failed");
 #else
-		if (read(ctl1[0], &c, 1) != 1) {
-			perror("read on pipe failed");
-			exit(1);
-		}
+		MYASSERT(read(ctl1[0], &c, 1) == 1, "read on pipe failed");
 
 		/* tell child to make another */
-		if (write(ctl2[1], &c, 1) != 1) {
-			perror("Write on pipe failed");
-			exit(1);
-		}
+		MYASSERT(write(ctl2[1], &c, 1) == 1, "Write on pipe failed");
 #endif
 		/* write it */
 		numWritten = write(1, buf[i & 1], blockSize);
@@ -221,20 +196,17 @@ main(int argc, char **argv)
 			break;
 		}
 #ifdef USE_PTHREADS
-		myassert(pthread_mutex_lock(&lock) == 0,
+		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
 		nblocks--;
-		myassert(pthread_cond_signal(&less) == 0,
+		MYASSERT(pthread_cond_signal(&less) == 0,
 		    "pthread_cond_signal failed");
-		myassert(pthread_mutex_unlock(&lock) == 0,
+		MYASSERT(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock failed");
 #endif
 		
 	}
-	if (gettimeofday(&tpend, NULL) != 0) {
-		perror("gettimeofday failed");
-		exit(1);
-	}
+	MYASSERT(gettimeofday(&tpend, NULL) == 0, "gettimeofday failed");
 	duration = tpend.tv_sec + tpend.tv_usec / 1000000.0 -
 	    tpstart.tv_sec - tpstart.tv_usec / 1000000.0;
 	fprintf(stderr, "%lld bytes written in %.3f secs (%.3f KB/sec)\n",
@@ -242,7 +214,7 @@ main(int argc, char **argv)
 	    duration, (float)i * blockSize / duration / 1024.0);
 	if (aborted)
 #ifdef USE_PTHREADS
-		myassert(pthread_cancel(tid) == 0, "pthread_cancel failed");
+		MYASSERT(pthread_cancel(tid) == 0, "pthread_cancel failed");
 #else
 		kill(pid, SIGTERM);
 #endif
@@ -261,32 +233,26 @@ makeBlocks(void *dummy)
 	SRAND(time(NULL));
 	for (i = 0; numBlocks == 0 || i < numBlocks; i++) {
 #ifdef USE_PTHREADS
-		myassert(pthread_mutex_lock(&lock) == 0,
+		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
 		while (nblocks > 1)
-			myassert(pthread_cond_wait(&less, &lock) == 0,
+			MYASSERT(pthread_cond_wait(&less, &lock) == 0,
 			    "pthread_cond_wait failed");
-		myassert(pthread_mutex_unlock(&lock) == 0,
+		MYASSERT(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock");
 #endif
 		initblock(buf[i & 1], blockSize, type, i);
 #ifdef USE_PTHREADS
-		myassert(pthread_mutex_lock(&lock) == 0,
+		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
 		nblocks++;
-		myassert(pthread_cond_signal(&more) == 0,
+		MYASSERT(pthread_cond_signal(&more) == 0,
 		    "pthread_cond_signal failed");
-		myassert(pthread_mutex_unlock(&lock) == 0,
+		MYASSERT(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock");
 #else
-		if (write(ctl1[1], &c, 1) != 1) {
-			perror("Write on pipe failed");
-			exit(1);
-		}
-		if (read(ctl2[0], &c, 1) != 1) {
-			perror("Read on pipe failed");
-			exit(1);
-		}
+		MYASSERT(write(ctl1[1], &c, 1) == 1, "Write on pipe failed");
+		MYASSERT(read(ctl2[0], &c, 1) == 1, "Read on pipe failed");
 #endif
 	}
 	return NULL;
@@ -301,8 +267,8 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "fblckgen version $Revision: 1.1 $\n"
-	    "Copyright Paul Ripke $Date: 2003/07/17 23:46:42 $\n\n");
+	fprintf(stderr, "fblckgen version $Revision: 1.2 $\n"
+	    "Copyright Paul Ripke $Date: 2003/07/22 12:52:51 $\n\n");
 	fprintf(stderr, "Usage: fblckgen [-a | -r] [-b bytes] "
 	    "[-c count]\n\n");
 	fprintf(stderr, "  -a          Write blocks of a repeating ASCII "
