@@ -1,4 +1,4 @@
-/* $Id: fblckgen.c,v 1.2 2003/07/22 12:52:51 stix Exp stix $ */
+/* $Id: fblckgen.c,v 1.3 2003/07/22 13:49:22 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -54,7 +54,7 @@
 
 #include "common.h"
 
-static char const rcsid[] = "$Id: fblckgen.c,v 1.2 2003/07/22 12:52:51 stix Exp stix $";
+static char const rcsid[] = "$Id: fblckgen.c,v 1.3 2003/07/22 13:49:22 stix Exp stix $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);
@@ -144,7 +144,8 @@ main(int argc, char **argv)
 	MYASSERT(pthread_attr_init(&attr) == 0,
 	    "pthread_attr_init failed");
 	MYASSERT(pthread_attr_setdetachstate(&attr,
-	    PTHREAD_CREATE_DETACHED) == 0, "pthread_attr_setdetachstate failed");
+	    PTHREAD_CREATE_DETACHED) == 0,
+	    "pthread_attr_setdetachstate failed");
 	MYASSERT(pthread_create(&tid, &attr, &makeBlocks, NULL) == 0,
 	    "pthread_create failed");
 	MYASSERT(pthread_attr_destroy(&attr) == 0,
@@ -184,7 +185,8 @@ main(int argc, char **argv)
 		numWritten = write(1, buf[i & 1], blockSize);
 		if (numWritten != blockSize) {
 			if (numWritten > 0) {
-				fprintf(stderr, "Short write: %lld bytes: %s\n",
+				fprintf(stderr, "Short write: "
+				    "%lld bytes: %s\n",
 				    (int64_t)numWritten, strerror(errno));
 			} else
 				perror("Write failed");
@@ -267,8 +269,8 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "fblckgen version $Revision: 1.2 $\n"
-	    "Copyright Paul Ripke $Date: 2003/07/22 12:52:51 $\n\n");
+	fprintf(stderr, "fblckgen version $Revision: 1.3 $\n"
+	    "Copyright Paul Ripke $Date: 2003/07/22 13:49:22 $\n\n");
 	fprintf(stderr, "Usage: fblckgen [-a | -r] [-b bytes] "
 	    "[-c count]\n\n");
 	fprintf(stderr, "  -a          Write blocks of a repeating ASCII "
