@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.3 2003/07/24 12:51:01 stix Exp stix $ */
+/* $Id: iohammer.c,v 1.4 2003/07/24 13:47:20 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -49,6 +49,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,7 +66,7 @@
 
 #include "common.h"
 
-static char const rcsid[] = "$Id: iohammer.c,v 1.3 2003/07/24 12:51:01 stix Exp stix $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.4 2003/07/24 13:47:20 stix Exp stix $";
 
 /* Prototypes */
 static void	*doIO(void *);
@@ -509,8 +510,8 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "iohammer version $Revision: 1.3 $.\n"
-	    "Copyright Paul Ripke $Date: 2003/07/24 12:51:01 $\n");
+	fprintf(stderr, "iohammer version $Revision: 1.4 $.\n"
+	    "Copyright Paul Ripke $Date: 2003/07/24 13:47:20 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else
