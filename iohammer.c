@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.1 2003/07/23 14:52:04 stix Exp stix $ */
+/* $Id: iohammer.c,v 1.2 2003/07/24 09:02:51 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -65,7 +65,7 @@
 
 #include "common.h"
 
-static char const rcsid[] = "$Id: iohammer.c,v 1.1 2003/07/23 14:52:04 stix Exp stix $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.2 2003/07/24 09:02:51 stix Exp stix $";
 
 /* Prototypes */
 static void	*doIO(void *);
@@ -97,6 +97,7 @@ main(int argc, char **argv)
 	char fileName[PATH_MAX];
 #ifdef USE_PTHREADS
 	pthread_t *tid;
+	pthread_attr_t attr;
 #else
 	char tok;
 	int fdmax, p[2];
@@ -172,10 +173,18 @@ main(int argc, char **argv)
 	    "pthread_mutex_init failed");
 	MYASSERT(pthread_cond_init(&cond, NULL) == 0,
 	    "pthread_cond_init failed");
+	MYASSERT(pthread_attr_init(&attr) == 0,
+	    "pthread_attr_init failed");
+	MYASSERT(pthread_attr_setdetachstate(&attr,
+	    PTHREAD_CREATE_DETACHED) == 0,
+	    "pthread_attr_setdetachstate failed");
 	for (i = 0; i < threads; i++) {
-		MYASSERT(pthread_create(&tid[i], NULL, &doIO, (void *)i) == 0,
+		MYASSERT(pthread_create(&tid[i], &attr, &doIO, (void *)i) == 0,
 		    "pthread_create failed");
 	}
+	MYASSERT(pthread_attr_destroy(&attr) == 0,
+	    "pthread_attr_destroy failed");
+	gettimeofday(&startTime, NULL);
 #else
 	MYASSERT((pipe_ctl_r = (int *) malloc(threads * sizeof(int))) != NULL,
 	    "malloc failed");
@@ -211,8 +220,6 @@ main(int argc, char **argv)
 	}
 #endif
 
-	gettimeofday(&startTime, NULL);
-
 #ifdef USE_PTHREADS
 	/* wait for the threads to finish */
 	MYASSERT(pthread_mutex_lock(&lock) == 0,
@@ -222,14 +229,11 @@ main(int argc, char **argv)
 		    "pthread_cond_wait failed");
 	MYASSERT(pthread_mutex_unlock(&lock) == 0,
 	    "pthread_mutex_unlock failed");
-	for (i = 0; i < threads; i++) {
-		MYASSERT(pthread_join(tid[i], NULL) == 0,
-		    "pthread_join failed");
-	}
 #else
 	/* kick start all the children */
 	tok = 1;
 	fdmax = 0;
+	gettimeofday(&startTime, NULL);
 	for (i = 0; i < threads && (iolimit == 0 ||
 	    numio < iolimit); i++) {
 		MYASSERT(write(pipe_ctl_w[i], &tok, 1) == 1,
@@ -288,7 +292,6 @@ main(int argc, char **argv)
 static void *
 doIO(void *arg)
 {
-	int thrnumio = 0;
 	char tok;
 	int writeFlag, tid;
 	long seed;
@@ -317,18 +320,7 @@ doIO(void *arg)
 			initblock(buf, blockSize, type, 1);
 		} else
 			writeFlag = 0;
-#ifdef USE_PTHREADS
-		MYASSERT(pthread_mutex_lock(&lock) == 0,
-		    "pthread_mutex_lock failed");
-		if (aborted || (iolimit > 0 && numio == iolimit))
-			break;		/* finished */
-		numio++;
-		thrnumio++;
-		if (writeFlag)
-			numWrites++;
-		MYASSERT(pthread_mutex_unlock(&lock) == 0,
-		    "pthread_mutex_unlock failed");
-#else
+#ifndef USE_PTHREADS
 		MYASSERT(read(pipe_ctl_r[tid], &tok, 1) == 1,
 		    "pipe read failed");
 		if (tok == 0) {
@@ -352,10 +344,24 @@ doIO(void *arg)
 			    (int64_t)pos, errno, strerror(errno));
 			if (!ignore) {
 				aborted = 1;
+#ifdef USE_PTHREADS
+				pthread_exit(0);
+#else
 				_exit(1);
+#endif
 			}
 		}
-#ifndef USE_PTHREADS
+#ifdef USE_PTHREADS
+		MYASSERT(pthread_mutex_lock(&lock) == 0,
+		    "pthread_mutex_lock failed");
+		numio++;
+		if (writeFlag)
+			numWrites++;
+		if (aborted || (iolimit > 0 && numio + threads >= iolimit + 1))
+			break;		/* finished */
+		MYASSERT(pthread_mutex_unlock(&lock) == 0,
+		    "pthread_mutex_unlock failed");
+#else
 		MYASSERT(write(pipe_cnt_w[tid], &tok, 1) == 1,
 		    "write to pipe failed");
 #endif
@@ -488,8 +494,13 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "iohammer version $Revision: 1.1 $.\n"
-	    "Copyright Paul Ripke $Date: 2003/07/23 14:52:04 $\n\n");
+	fprintf(stderr, "iohammer version $Revision: 1.2 $.\n"
+	    "Copyright Paul Ripke $Date: 2003/07/24 09:02:51 $\n");
+#ifdef USE_PTHREADS
+	fprintf(stderr, "Built to use pthreads.\n\n");
+#else
+	fprintf(stderr, "Built to use multiple processes.\n\n");
+#endif
 	fprintf(stderr, "Usage: iohammer [-a | -r] [-i] [-b size] "
 	    "[-c count] [-w write%%]\n");
 	fprintf(stderr, "                [-t threads] [-s size] "
@@ -505,8 +516,12 @@ usage()
 	    "writes\n");
 	fprintf(stderr, "  -t threads  Number of threads to do I/O\n");
 	fprintf(stderr, "  -s size     Size of file/device to create/use\n");
+	fprintf(stderr, "              Specify '0' to attempt to find the "
+	    "size of file/device\n");
 	fprintf(stderr, "  -f file     Name of file (must exist), directory "
-	    "or device. If directory, a temporary file is created\n\n");
+	    "or device\n");
+	fprintf(stderr, "              If directory, a temporary file is "
+	    "created\n\n");
 	fprintf(stderr, "Compiled defaults:\n");
 	fprintf(stderr, "    iohammer -a -b 1s -c 0 -w 0 -s 1m -f .\n\n");
 	fprintf(stderr, "  Numeric arguments take an optional "
