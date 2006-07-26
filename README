@@ -1,62 +1,88 @@
-  $Id$
+  $Id: README,v 1.1 2003/10/12 06:19:06 stix Exp $
 
   iotools
 
-  Paul Ripke stix@stix.homeunix.net, http://stix.homeunix.net:8080/software/
+  Paul Ripke stix@stix.id.au, http://stix.id.au/wiki/iotools
 
 INTRODUCTION
 
-iotools consists of two simple programs:
+iotools consists of three simple programs - from the man pages:
 
-  fblckgen: "Fast Block Generator" - generates blocks of data, either a
-	repeating ascii sequence which is very compressible, or a pseudo-
-	random binary sequence, which, although very simple, does not
-	compress. Very handy for benchmarking tape drives, or just making a
-	sized lump of data. By using double buffering and either pthreads
-	or multiple processes, it can generally keep a tape drive busy.
-	E.g. On an AIX box, with IBM 3580 Ultrium fiber attached drives:
-		ksh$ fblckgen -a -b 256k -c 4k > /dev/rmt1.1
-		1073741824 bytes written in 28.134 secs (37270.292 KiB/sec)
-		ksh$ fblckgen -r -b 256k -c 4k > /dev/rmt1.1
-		1073741824 bytes written in 71.960 secs (14571.677 KiB/sec)
-	And to demonstrate compressibility, on my aging Mac OS X laptop:
-		ksh$ fblckgen -a -b 256k -c 40 | gzip -9v > /dev/null
-		10485760 bytes written in 2.071 secs (4944.402 KiB/sec)
-		 99.6%
-		ksh$ fblckgen -r -b 256k -c 40 | gzip -9v > /dev/null
-		10485760 bytes written in 7.588 secs (1349.425 KiB/sec)
-		  0.0%
-	Used in "random" mode, it can be used to find the approximate
-	native capacity of a given tape. E.g. On my NetBSD system, with
-	a AIT-1 drive (SONY SDX-300C) and 170m tape:
-		ksh$ fblckgen -r -b 64k -c 640k > /dev/nrst1
-		Write failed: Input/output error
-		-1 bytes, 348667 full blocks written.
-		22850240512 bytes written in 8016.739 secs (2783.512 KiB/sec)
+  fblckgen: Fast block generator
+       fblckgen  generates  blocks  of data, either a repeating ascii sequence
+       which is very compressible, or a pseudo- random binary sequence, which,
+       although  very  simple,  does not compress. Very handy for benchmarking
+       tape drives, or just making a sized  lump  of  data.  By  using  double
+       buffering  and  either pthreads or multiple processes, it can generally
+       keep a tape drive busy.
 
+       Filling an LTO1 tape with pseudo-random data:
+
+              sh$ fblckgen -rb 64k -c 0 > /dev/nrst1
+              Write failed: Input/output error
+              105722740736 bytes written in 7064.506 secs (14614.590 KB/sec)
 
   iohammer:
-	It does what it says - very similar to a tool named "rawio" floating
-	out on the 'net. Using multiple threads (either pthreads or multiple
-	processes) iohammer will issue random I/Os, with a percentage based
-	write ratio to a file or raw device. Good for comparing different
-	disk layouts (RAID5, RAID0, RAID1, RAID0+1, RAID3, etc), stripe
-	unit sizes, and general disk random I/O performance. Very good to
-	see the difference the queue_depth parameter makes under AIX!
+       iohammer does what it says - very  similar  to  a  tool  named  `rawio'
+       floating  out  on  the 'net. Using multiple threads (either pthreads or
+       multiple processes) iohammer will issue random I/Os, with a  percentage
+       based write ratio to a file or raw device. Good for comparing different
+       disk layouts (RAID5, RAID0, RAID1, RAID0+1, RAID3,  etc),  stripe  unit
+       sizes,  and  general  disk random I/O performance. Very good to see the
+       difference the queue_depth parameter makes under AIX!
 
+       Testing random read performance on a raw partition:
+
+              sh$ iohammer -f /dev/vnd0d -c 10k
+              Size 1073741824: 121.097 secs, 10240 IOs, 0 writes
+              84.6 IOs/sec, 11.83 ms average seek
+
+  mbdd:
+       mbdd  is a threaded version of dd, without all the extras. It maintains
+       a number of buffers, a thread to read from STDIN to fill  the  buffers,
+       and  a  thread  to write to STDOUT, emptying the buffers. Several reads
+       may be done to fill a buffer entirely. A  partial  write  (not  a  full
+       buffer length) will abort the copy.
+
+       Its primary use is as a buffer between bursty,  non-threaded  programs.
+       One example is its use between tar(1) and bzip2(1), allowing both util-
+       ities to attempt to run without waiting on the other.
+
+       As a buffer between tar(1) and  bzip2(1),  using  a  total  of  20  MiB
+       buffers:
+
+              sh$ time tar -cf - . | mbdd -n 320 | bzip2 > /tmp/arc.tgz
+              807311360 bytes transferred in 374.285 secs (2106.392 KiB/sec)
+              88694 partial reads, 218.527 average buffers full
+                374.37s real   311.43s user    18.64s system
+
+       Compared to without:
+
+              sh$ time tar -cf - . | bzip2 > /tmp/arc.tgz
+                556.37s real   307.44s user    11.60s system
+
+	
 BUILDING
 
-Examine and edit the Makefile! This doesn't use autoconf (yet), and whether
-it will or not in the future, I don't know. The Makefile should be fairly
-self-explainatory, the main "toggle" being whether or not to build using
-pthreads. As the Makefile says, you must have a true kernel thread based
-pthread library - GNU pth just won't work. The code has been written mainly
-under Darwin 6.6 (Mac OS X 10.2.6) and NetBSD-current (2003-05-13), and
-tested under Linux, Solaris, AIX and Tru64.
+iotools is now built using the autoconf framework. One of the main options
+you may wish to customize is the use of pthreads - although the non-pthread
+code is not being well maintained. If using pthreads, note that your OS	
+must support true kernel threads, GNU pth will not work.
 
-Both tools will be built through the default target via "make". There is no
-"install" target! Copy the resulting executables where you will.
+Note that 'mbdd' will only build with pthreads - although possible to write
+without pthreads, I have decided it is not worth the trouble.
 
-TODO
+WORKING TARGETS
 
-- autoconf - is it really worth it? Probably...
+The 20060726 version using pthreads has been tested on:
+
+OS version			C Compiler version
+AIX 4.1.5 			xlC.C 3.1.4.7
+AIX 5.3				vac.C 6.0.0.0
+Linux 2.4.19-rc5 glibc-2.2.5-42	gcc 2.96-113
+Mac OS X 10.2.8 (Darwin 6.8)	gcc 3.3
+Mac OS X 10.4.6 (Darwin 8.6)	gcc 3.3
+NetBSD 3.0			gcc 3.3.3
+SunOS 5.6			WorkShop Compilers 4.2
+Tru64 4.0D			DEC C V5.6-079
+WinXP SP2 + cygwin		gcc 3.4.4
