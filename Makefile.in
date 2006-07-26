@@ -1,70 +1,60 @@
-# $Id$
-# 
-# Some tuneables
-#   one day, this may be replaced by autoconf, etc.
-VERSION=1.0
+#	$Id$
+#
 
-# Compiler (use cc_r for AIX)
-CC=			gcc
+srcdir	= @srcdir@
+VPATH	= @srcdir@
+SHELL	= /bin/sh
 
-# Compiler flags
-# Flags for gcc
-FLAGS=			-Wall -pipe -O3 -g
-# Flags for generic 'C' compiler
-#FLAGS=			-O
+prefix	= @prefix@
+exec_prefix = @exec_prefix@
+bindir	= @bindir@
+mandir	= @mandir@
+mandirman1 = ${mandir}/man1
 
-# Platform/OS compiler flags
-# Flags for Solaris
-#PFLAGS=		-D_FILE_OFFSET_BITS=64
-# Flags for AIX < 4.3
-#PFLAGS=		-D_LARGE_FILES "-Dint64_t=long long"
-# Flags for AIX >= 4.3
-#PFLAGS=		-D_LARGE_FILES
-# Flags for Darwin & NetBSD
-PFLAGS=			-DMAP_ANONYMOUS
-# Flags for Linux
-#PFLAGS=		-D_LARGEFILE_SOURCE -DMAP_ANONYMOUS
+CC	= @CC@
+CPPFLAGS = @CPPFLAGS@ @DEFS@
+CFLAGS	= @CFLAGS@
+LIBS	= @LIBS@
+LDFLAGS	= @LDFLAGS@
 
-# Use SYSV shared memory (default is mmap(2) style)
-# Only used when not using pthreads
-#SYSV=			-DUSE_SYSVSHM
+INSTALL	= @INSTALL@
 
-# Use pthreads (otherwise, uses multiple processes and shared memory)
-# Note: this needs real kernel threads for non-blocking I/O
-# GNU Portable Threads Library and MIT pthreads just won't do.
-# Tested on Darwin/Mac OS X 10.2, NetBSD (-current June 2003),
-# AIX (4.2.1, 4.3.3, 5.1), Tru64 4.0D, Solaris (5.7, 5.8).
-PTHR=			-DUSE_PTHREADS
-LIBS=			-lpthread
-# For AIX < 4.3
-#LIBS=			-lpthreads
+ALLPROGS = fblckgen iohammer mbdd
+PROGS	= @PROGS@
+MANS	= fblckgen.1 iohammer.1 mbdd.1
+SRCS	= common.c fblckgen.c iohammer.c mbdd.c
+OBJS	= ${SRCS:.c=.o}
 
-#############################################
-##### Shouldn't need changes below here #####
-#############################################
+all:	${PROGS}
 
-CFLAGS=			${FLAGS} ${PFLAGS} ${SYSV} ${PTHR} -DVERSION=\"${VERSION}\"
-DISTFILE=		iotools-${VERSION}.tar.gz
+fblckgen: fblckgen.o common.o
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ fblckgen.o common.o ${LIBS}
 
-all:			fblckgen iohammer
+iohammer: iohammer.o common.o
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ iohammer.o common.o ${LIBS}
 
-fblckgen:		fblckgen.o common.o
-			${CC} -o fblckgen fblckgen.o common.o ${LIBS}
-iohammer:		iohammer.o common.o
-			${CC} -o iohammer iohammer.o common.o ${LIBS}
-common.o:		common.c common.h
-			${CC} -c ${CFLAGS} common.c
-fblckgen.o:		fblckgen.c common.h
-			${CC} -c ${CFLAGS} fblckgen.c
-iohammer.o:		iohammer.c common.h
-			${CC} -c ${CFLAGS} iohammer.c
+mbdd:	mbdd.o common.o
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ mbdd.o common.o ${LIBS}
+
+${OBJS}: iotools.h common.h config.h
+
+.c.o:
+	${CC} ${CFLAGS} ${CPPFLAGS} -c $<
+
+install: all
+	-mkdir -p ${bindir}
+	@for i in ${PROGS}; do \
+		echo "${INSTALL} -m 555 $$i ${bindir}/$$i"; \
+		${INSTALL} -m 555 $$i ${bindir}/$$i; \
+	done
+	-mkdir -p ${mandirman1}
+	@for i in ${MANS}; do \
+		echo "${INSTALL} -m 444 $$i ${mandirman1}/$$i"; \
+		${INSTALL} -m 444 $$i ${mandirman1}/$$i; \
+	done
 
 clean:
-			rm -f fblckgen iohammer fblckgen.o iohammer.o common.o .gdb_history \
-			${DISTFILE}
+	rm -f core ${ALLPROGS} ${OBJS}
 
-distfile:
-			mkdir iotools-${VERSION}
-			cp Makefile README fblckgen.c iohammer.c common.[ch] iotools-${VERSION}
-			tar -cf - iotools-${VERSION} | gzip -9 > ${DISTFILE}
-			rm -rf iotools-${VERSION}
+distclean: clean
+	rm -f Makefile config.cache config.log config.status config.h
