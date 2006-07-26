@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.7 2003/10/12 05:54:07 stix Exp stix $ */
+/* $Id: iohammer.c,v 1.8 2006/07/26 12:17:26 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #include <sys/disklabel.h>
 #endif
 
-static char const rcsid[] = "$Id: iohammer.c,v 1.7 2003/10/12 05:54:07 stix Exp stix $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.8 2006/07/26 12:17:26 stix Exp $";
 
 /* Prototypes */
 static void	*doIO(void *);
@@ -285,7 +285,7 @@ main(int argc, char **argv)
 		    threads, blockSize, writePct, numio, numWrites, secs,
 		    numio / secs);
 	} else {
-		printf("%.3f secs, %"PRId64" IOs, %"PRId64" writes, ",
+		printf("%.3f secs, %"PRId64" IOs, %"PRId64" writes\n",
 		    secs, numio, numWrites);
 		printf("%.1f IOs/sec, %.2f ms average seek\n", numio / secs,
 		    secs / numio * 1000.0);
@@ -500,7 +500,7 @@ static void
 usage()
 {
 	fprintf(stderr, "iohammer version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2003/10/12 05:54:07 $\n");
+	    "Copyright Paul Ripke $Date: 2006/07/26 12:17:26 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else
