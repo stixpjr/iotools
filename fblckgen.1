@@ -1,0 +1,129 @@
+.\" $Id$
+.\" 
+.\" 
+.\" Copyright (c) 2006 Paul Ripke. All rights reserved.
+.\"
+.\" This software is distributed under the so-called ``revised Berkeley
+.\" License'':
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. The name of the author may not be used to endorse or promote
+.\"    products derived from this software without specific prior written
+.\"    permission.
+.\"
+.\" This software is provided ``as is'', and any express or implied
+.\" warranties, including, but not limited to, the implied warranties of
+.\" merchantability and fitness for a particular purpose are disclaimed.
+.\" In no event shall the author be liable for any direct, indirect,
+.\" incidental, special, exemplary, or consequential damages (including,
+.\" but not limited to, procurement of substitute goods or services;
+.\" loss of use, data, or profits; or business interruption) however
+.\" caused and on any theory of liability, whether in contract, strict
+.\" liability, or tort (including negligence or otherwise) arising in
+.\" any way out of the use of this software, even if advised of the
+.\" possibility of such damage.
+.\"
+.\"
+.TH FBLCKGEN 1 2006-07-26 iotools
+.SH NAME
+.B fblckgen
+.Nd
+\- Fast block generator
+.SH SYNOPSIS
+.B fblckgen
+.RB [ \-a | \-r ]
+.RB [ -q ]
+.RB [ \-b
+.IR blocksize ]
+.RB [ \-c
+.IR count ]
+.SH DESCRIPTION
+.B fblckgen
+generates blocks of data, either a
+repeating ascii sequence which is very compressible, or a pseudo-
+random binary sequence, which, although very simple, does not
+compress. Very handy for benchmarking tape drives, or just making a
+sized lump of data. By using double buffering and either pthreads
+or multiple processes, it can generally keep a tape drive busy.
+.PP
+Data is written directly to a copy of the STDOUT file descriptor. Shell
+redirection must be used to output to an alternate destination.
+.PP
+Before exiting, 
+.B fblckgen
+writes a single summary line to STDERR, containing statistics from the run.
+.PP
+.SH OPTIONS
+.TP
+.B \-a
+Instructs
+.B fblckgen
+to generate blocks of a repeating ASCII sequence, from octal 040 (` ', space),
+through octal 176 (`~', tilde). The sequence repeats, without newlines. This the
+default mode of operation.
+.TP
+.BI \-b\  blocksize
+Writes blocks of size
+.I blocksize
+to STDOUT. If not specified, a blocksize of `1s', 512 bytes, is used.
+.TP
+.BI \-c\  count
+Writes
+.I count
+blocks, or until error if
+.I count
+is zero. If not specified, a default of `1k', 1024, is used.
+.TP
+.B \-q
+Quiet operation, suppresses the printing of the summary line.
+.TP
+.B \-r
+Instructs
+.B fblckgen
+to generate a pseudo-random sequence, based on an inlined copy of
+.BR rand (3).
+.\" x[i+1] = x[i] * 1103515245 + 12345
+.LP
+All numeric arguments may take an optional letter suffix, similar to the
+.BR strsuftollx (3)
+function introduced in NetBSD.
+.IP
+s  sector; multiply by 512.
+.br
+k  kibibytes; multiply by 1024 or 2^10.
+.br
+m  mebibytes; multiply by 1048576 or 2^20.
+.br
+g  gibibytes; multiply by 2^30.
+.br
+t  tebibytes; multiply by 2^40.
+.br
+p  pebibytes; multiply by 2^50.
+.br
+e  exbibytes; multiply by 2^60.
+.SH EXIT STATUS
+.B fblckgen
+exits 0 on success, and >0 if an error occurred.
+.SH EXAMPLES
+Filling an LTO1 tape with pseudo-random data:
+.IP
+.nf
+sh$ fblckgen -rb 64k -c 0 > /dev/nrst1
+Write failed: Input/output error
+105722740736 bytes written in 7064.506 secs (14614.590 KB/sec)
+.fi
+.LP
+.SH SEE ALSO
+.BR iohammer (1),\  mbdd (1)
+.SH AUTHOR
+.B fblckgen
+and the rest of the iotools were developed by Paul Ripke,
+<stix@stix.id.au>. See <http://stix.id.au/wiki/iotools> for the current
+version.

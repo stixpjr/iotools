@@ -1,0 +1,168 @@
+.\" $Id$
+.\" 
+.\" 
+.\" Copyright (c) 2006 Paul Ripke. All rights reserved.
+.\"
+.\" This software is distributed under the so-called ``revised Berkeley
+.\" License'':
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. The name of the author may not be used to endorse or promote
+.\"    products derived from this software without specific prior written
+.\"    permission.
+.\"
+.\" This software is provided ``as is'', and any express or implied
+.\" warranties, including, but not limited to, the implied warranties of
+.\" merchantability and fitness for a particular purpose are disclaimed.
+.\" In no event shall the author be liable for any direct, indirect,
+.\" incidental, special, exemplary, or consequential damages (including,
+.\" but not limited to, procurement of substitute goods or services;
+.\" loss of use, data, or profits; or business interruption) however
+.\" caused and on any theory of liability, whether in contract, strict
+.\" liability, or tort (including negligence or otherwise) arising in
+.\" any way out of the use of this software, even if advised of the
+.\" possibility of such damage.
+.\"
+.\"
+.TH IOHAMMER 1 2006-07-26 iotools
+.SH NAME
+.B iohammer
+.Nd
+\- Random I/O testing utility
+.SH SYNOPSIS
+.B iohammer
+.RB [ \-a | \-r ]
+.RB [ \-iu ]
+.RB [ \-b
+.IR blocksize ]
+.RB [ \-c
+.IR count ]
+.RB [ \-f
+.IR file ]
+.RB [ \-s
+.IR size ]
+.RB [ \-t
+.IR threads ]
+.RB [ \-w
+.IR write% ]
+.SH DESCRIPTION
+.B iohammer
+does what it says - very similar to a tool named `rawio' floating
+out on the 'net. Using multiple threads (either pthreads or multiple
+processes) iohammer will issue random I/Os, with a percentage based
+write ratio to a file or raw device. Good for comparing different
+disk layouts (RAID5, RAID0, RAID1, RAID0+1, RAID3, etc), stripe
+unit sizes, and general disk random I/O performance. Very good to
+see the difference the queue_depth parameter makes under AIX!
+.PP
+At the end of an error free run,
+.B iohammer
+writes a single summary line to STDOUT, containing statistics from the run.
+.PP
+.SH OPTIONS
+.TP
+.B \-a
+Instructs
+.B iohammer
+to generate blocks of a repeating ASCII sequence, from octal 040 (` ', space),
+through octal 176 (`~', tilde). The sequence repeats, without newlines. This the
+default mode of operation.
+.TP
+.BI \-b\  blocksize
+Writes blocks of size
+.IR blocksize .
+If not specified, a blocksize of `1s', 512 bytes, is used.
+.TP
+.BI \-c\  count
+Writes
+.I count
+blocks, or until error if
+.I count
+is zero and 
+.B \-i
+is not specified. Defaults to 0.
+.TP
+.BI \-f\  file
+Specifies the
+.IR file ,
+directory or device to open. Only devices that support
+.BR lseek (2)
+are supported. If a file is given, the size is determined from the LEOF of the
+file. If a directory is given, a temporary file with a generated name is
+created within that directory. If a raw device is given, some (minimal) effort
+is made to determine the size of the object.
+.TP
+.B \-i
+Ignore all I/O errors and continue execution. By default, execution halts on
+error.
+.TP
+.B \-r
+Instructs
+.B iohammer
+to generate a pseudo-random sequence, based on an inlined copy of
+.BR rand (3).
+.\" x[i+1] = x[i] * 1103515245 + 12345
+.TP
+.BI \-s\  size
+If a size cannot be determined, use the given
+.IR size ,
+in bytes, with optional
+suffix. Defaults to `1m', 1048576 bytes.
+.TP
+.BI \-t\  threads
+Specifies the number of I/O threads to use. Defaults to 8.
+.TP
+.B \-u
+Unformatted output. Generate a numeric, tab separated summary line suitable for
+parsing by scripts.
+.TP
+.BI \-w\  write%
+Specifies the approximate ratio of reads to writes. If `0', the default,
+is given the file/device is opened read-only, and only random reads are
+performed.
+.LP
+All numeric arguments may take an optional letter suffix, similar to the
+.BR strsuftollx (3)
+function introduced in NetBSD.
+.IP
+s  sector; multiply by 512.
+.br
+k  kibibytes; multiply by 1024 or 2^10.
+.br
+m  mebibytes; multiply by 1048576 or 2^20.
+.br
+g  gibibytes; multiply by 2^30.
+.br
+t  tebibytes; multiply by 2^40.
+.br
+p  pebibytes; multiply by 2^50.
+.br
+e  exbibytes; multiply by 2^60.
+.SH EXIT STATUS
+.B iohammer
+exits 0 on success, and >0 if an error occurred.
+.SH EXAMPLES
+Testing random read performance on a raw partition:
+.IP
+.nf
+sh$ iohammer -f /dev/vnd0d -c 10k
+Size 1073741824: 121.097 secs, 10240 IOs, 0 writes, 84.6 IOs/sec, 11.83 ms average seek
+.fi
+.LP
+.SH SEE ALSO
+.BR fblckgen (1),\  mbdd (1)
+.SH BUGS
+Size detection needs work, as it seems there is no standard, reliable method
+for determining the length of a raw device.
+.SH AUTHOR
+.B iohammer
+and the rest of the iotools were developed by Paul Ripke,
+<stix@stix.id.au>. See <http://stix.id.au/wiki/iotools> for the current
+version.

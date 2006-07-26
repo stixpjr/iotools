@@ -1,0 +1,132 @@
+.\" $Id$
+.\" 
+.\" 
+.\" Copyright (c) 2006 Paul Ripke. All rights reserved.
+.\"
+.\" This software is distributed under the so-called ``revised Berkeley
+.\" License'':
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. The name of the author may not be used to endorse or promote
+.\"    products derived from this software without specific prior written
+.\"    permission.
+.\"
+.\" This software is provided ``as is'', and any express or implied
+.\" warranties, including, but not limited to, the implied warranties of
+.\" merchantability and fitness for a particular purpose are disclaimed.
+.\" In no event shall the author be liable for any direct, indirect,
+.\" incidental, special, exemplary, or consequential damages (including,
+.\" but not limited to, procurement of substitute goods or services;
+.\" loss of use, data, or profits; or business interruption) however
+.\" caused and on any theory of liability, whether in contract, strict
+.\" liability, or tort (including negligence or otherwise) arising in
+.\" any way out of the use of this software, even if advised of the
+.\" possibility of such damage.
+.\"
+.\"
+.TH MBDD 1 2006-07-26 iotools
+.SH NAME
+.B mbdd
+.Nd
+\- Multi Buffer dd
+.SH SYNOPSIS
+.B mbdd
+.RB [ \-b
+.IR buffersize ]
+.RB [ \-n
+.IR number ]
+.SH DESCRIPTION
+.B mbdd
+is a threaded version of dd, without all the extras. It maintains a number of
+buffers, a thread to read from STDIN to fill the buffers, and a thread to
+write to STDOUT, emptying the buffers. Several reads may be done to fill a
+buffer entirely. A partial write (not a full buffer length) will abort the
+copy.
+.PP
+.B mbdd
+continues until EOF on STDIN. The last block written may not be a full buffer,
+that is, it is not rounded up to the buffer size.
+.PP
+Its primary use is as a buffer between bursty, non-threaded programs. One
+example is its use between
+.BR tar (1)\ and
+.BR gzip (1),
+allowing both utilities to attempt to run without waiting on the other.
+.PP
+Before exiting, 
+.B mbdd
+writes a summary to STDERR, containing statistics from the run.
+.PP
+.SH OPTIONS
+.TP
+.BI \-b\  buffersize
+Reads and writes are performed in chunks of
+.I buffersize
+bytes. If not specified, a buffersize of `64k', 65536 bytes, is used.
+.TP
+.BI \-n\  number
+Specifies the
+.I number
+of buffers to allocate and use in the circular queue. Defaults to 16.
+.TP
+.B \-q
+Quiet operation, suppresses the printing of the summary line.
+.LP
+All numeric arguments may take an optional letter suffix, similar to the
+.BR strsuftollx (3)
+function introduced in NetBSD.
+.IP
+s  sector; multiply by 512.
+.br
+k  kibibytes; multiply by 1024 or 2^10.
+.br
+m  mebibytes; multiply by 1048576 or 2^20.
+.br
+g  gibibytes; multiply by 2^30.
+.br
+t  tebibytes; multiply by 2^40.
+.br
+p  pebibytes; multiply by 2^50.
+.br
+e  exbibytes; multiply by 2^60.
+.SH EXIT STATUS
+.B mbdd
+exits 0 on success, and >0 if an error occurred.
+.SH EXAMPLES
+As a buffer between
+.BR tar (1)\ and
+.BR bzip2 (1),
+using a total of 20 MiB buffer space:
+.IP
+.nf
+sh$ time tar -cf - . | mbdd -n 320 | bzip2 > /tmp/arc.tar.bz2
+807311360 bytes transferred in 374.285 secs (2106.392 KiB/sec)
+88694 partial reads, 218.527 average buffers full
+  374.37s real   311.43s user    18.64s system
+.fi
+.LP
+Compared to without:
+.IP
+.nf
+sh$ time tar -cf - . | bzip2 > /tmp/arc.tar.bz2
+  556.37s real   307.44s user    11.60s system
+.fi
+.LP
+.SH SEE ALSO
+.BR fblckgen (1),\  iohammer (1)
+.SH BUGS
+As the size of the kernel pipe buffer may be rather small (eg. 8 KiB) on many
+implementations, high numbers of "partial reads" may occur if using larger
+buffers.
+.SH AUTHOR
+.B mbdd
+and the rest of the iotools were developed by Paul Ripke,
+<stix@stix.id.au>. See <http://stix.id.au/wiki/iotools> for the current
+version.
