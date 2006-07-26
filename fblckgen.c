@@ -1,7 +1,7 @@
-/* $Id: fblckgen.c,v 1.6 2003/10/12 05:53:47 stix Exp stix $ */
+/* $Id: fblckgen.c,v 1.7 2003/10/12 06:16:15 stix Exp $ */
 
 /*
- * Copyright (c) 2003 Paul Ripke. All rights reserved.
+ * Copyright (c) 2004 Paul Ripke. All rights reserved.
  *
  *  This software is distributed under the so-called ``revised Berkeley
  *  License'':
@@ -31,30 +31,10 @@
  * possibility of such damage.
  */
 
-#include <sys/time.h>
-#include <sys/types.h>
-
-#include <assert.h>
-#include <ctype.h>
-#include <errno.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
-#ifdef USE_PTHREADS
-#include <pthread.h>
-#endif
-
-#ifdef NEEDS_GETOPT
-#include <getopt.h>
-#endif
-
+#include "iotools.h"
 #include "common.h"
 
-static char const rcsid[] = "$Id: fblckgen.c,v 1.6 2003/10/12 05:53:47 stix Exp stix $";
+static char const rcsid[] = "$Id: fblckgen.c,v 1.7 2003/10/12 06:16:15 stix Exp $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);
@@ -64,15 +44,16 @@ static void	usage();
 /* Globals */
 static char *buf[2];
 static int type;
-static volatile int aborted;
+static int flAborted;
 static long blockSize;
 static int64_t numBlocks;
+static int outfd;
 
 #ifdef USE_PTHREADS
 static pthread_mutex_t lock;
 static pthread_cond_t less;
 static pthread_cond_t more;
-static volatile int nblocks;
+static int nblocks;
 #else
 static int ctl1[2], ctl2[2];
 #endif
@@ -81,6 +62,7 @@ int
 main(int argc, char **argv)
 {
 	int c;
+	int flQuiet;
 	int64_t numWritten;
 	int64_t i;
 	float duration;
@@ -92,13 +74,21 @@ main(int argc, char **argv)
 #else
 	pid_t pid;
 #endif
+	/* close off stdout, so stdio doesn't play with it */
+	outfd = dup(STDOUT_FILENO);
+	if (outfd < 0) {
+		perror("dup on stdout failed");
+		exit(1);
+	}
+	close(STDOUT_FILENO);
 
 	/* set defaults */
 	blockSize = 512;
 	numBlocks = 1024;
 	type = ALPHADATA;
+	flQuiet = 0;
 
-	while ((c = getopt(argc, argv, "arb:c:")) != EOF) {
+	while ((c = getopt(argc, argv, "arb:c:q")) != EOF) {
 		switch (c) {
 		case 'a':
 			type = ALPHADATA;
@@ -112,7 +102,11 @@ main(int argc, char **argv)
 		case 'c':
 			numBlocks = getnum(optarg);
 			break;
+		case 'q':
+			flQuiet = 1;
+			break;
 		case '?':
+		default:
 			usage();
 			exit(1);
 		}
@@ -132,7 +126,7 @@ main(int argc, char **argv)
 #endif
 	buf[0] = buffer;
 	buf[1] = (char *)buffer + blockSize;
-	aborted = 0;
+	flAborted = 0;
 #ifdef USE_PTHREADS
 	nblocks = 0;
 	MYASSERT(pthread_mutex_init(&lock, NULL) == 0,
@@ -165,7 +159,7 @@ main(int argc, char **argv)
 #endif
 	signal(SIGINT, &cleanup);
 	MYASSERT(gettimeofday(&tpstart, NULL) == 0, "gettimeofday failed");
-	for (i = 0; !aborted && (numBlocks == 0 || i < numBlocks); i++) {
+	for (i = 0; !flAborted && (numBlocks == 0 || i < numBlocks); i++) {
 		/* wait for block of data */
 #ifdef USE_PTHREADS
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
@@ -182,19 +176,13 @@ main(int argc, char **argv)
 		MYASSERT(write(ctl2[1], &c, 1) == 1, "Write on pipe failed");
 #endif
 		/* write it */
-		numWritten = write(1, buf[i & 1], blockSize);
+		numWritten = write(outfd, buf[i & 1], blockSize);
 		if (numWritten != blockSize) {
 			if (numWritten > 0) {
 				fprintf(stderr, "Short write: "
-				    "%lld bytes: %s\n",
-				    (int64_t)numWritten, strerror(errno));
+				    "%" PRId64 " bytes\n", (int64_t)numWritten);
 			} else
 				perror("Write failed");
-			fprintf(stderr, "%lld bytes, %lld full blocks "
-			    "written.\n",
-			    (int64_t)i * blockSize +
-			    (numWritten > 0) ? numWritten : 0,
-			    (int64_t)i);
 			break;
 		}
 #ifdef USE_PTHREADS
@@ -209,12 +197,17 @@ main(int argc, char **argv)
 		
 	}
 	MYASSERT(gettimeofday(&tpend, NULL) == 0, "gettimeofday failed");
-	duration = tpend.tv_sec + tpend.tv_usec / 1000000.0 -
-	    tpstart.tv_sec - tpstart.tv_usec / 1000000.0;
-	fprintf(stderr, "%lld bytes written in %.3f secs (%.3f KiB/sec)\n",
-	    (int64_t)i * blockSize,
-	    duration, (float)i * blockSize / duration / 1024.0);
-	if (aborted)
+	if (!flQuiet) {
+		if (flAborted)
+			fprintf(stderr, "Transfer aborted.\n");
+		duration = tpend.tv_sec + tpend.tv_usec / 1000000.0 -
+		    tpstart.tv_sec - tpstart.tv_usec / 1000000.0;
+		fprintf(stderr, "%" PRId64
+		    " bytes written in %.3f secs (%.3f KiB/sec)\n",
+		    (int64_t)i * blockSize,
+		    duration, (float)i * blockSize / duration / 1024.0);
+	}
+	if (flAborted)
 #ifdef USE_PTHREADS
 		MYASSERT(pthread_cancel(tid) == 0, "pthread_cancel failed");
 #else
@@ -233,7 +226,7 @@ makeBlocks(void *dummy)
 	int64_t i;
 
 	SRAND(time(NULL));
-	for (i = 0; numBlocks == 0 || i < numBlocks; i++) {
+	for (i = 0; (numBlocks == 0 || i < numBlocks) && !flAborted; i++) {
 #ifdef USE_PTHREADS
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
@@ -263,20 +256,20 @@ makeBlocks(void *dummy)
 static void
 cleanup(int sig)
 {
-	aborted = 1;
+	flAborted = 1;
 }
 
 static void
 usage()
 {
-	fprintf(stderr, "fblckgen version " VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2003/10/12 05:53:47 $\n");
+	fprintf(stderr, "fblckgen version " PACKAGE_VERSION ".\n"
+	    "Copyright Paul Ripke $Date: 2003/10/12 06:16:15 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else   
 	fprintf(stderr, "Built to use multiple processes.\n\n");
 #endif  
-	fprintf(stderr, "Usage: fblckgen [-a | -r] [-b bytes] "
+	fprintf(stderr, "Usage: fblckgen [-a | -r] [-q] [-b bytes] "
 	    "[-c count]\n\n");
 	fprintf(stderr, "  -a          Write blocks of a repeating ASCII "
 	    "string (compresses well)\n");
@@ -284,7 +277,8 @@ usage()
 	    "(shouldn't compress)\n");
 	fprintf(stderr, "  -b bytes    Set write blocksize\n");
 	fprintf(stderr, "  -c count    Number of blocks to write "
-	    "(zero for infinite)\n\n");
+	    "(zero for infinite)\n");
+	fprintf(stderr, "  -q          Quiet operation\n\n");
 	fprintf(stderr, "Compiled defaults:\n");
 	fprintf(stderr, "    fblckgen -a -b 1s -c 1k\n\n");
 	fprintf(stderr, "Numeric arguments take an optional "
@@ -297,4 +291,3 @@ usage()
 	fprintf(stderr, "  p:        pebi (x 2^50)\n");
 	fprintf(stderr, "  e:        exbi (x 2^60)\n");
 }
-
