@@ -1,4 +1,4 @@
-.\" $Id$
+.\" $Id: iohammer.1,v 1.1 2006/07/26 12:22:21 stix Exp $
 .\" 
 .\" 
 .\" Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -64,7 +64,7 @@ see the difference the queue_depth parameter makes under AIX!
 .PP
 At the end of an error free run,
 .B iohammer
-writes a single summary line to STDOUT, containing statistics from the run.
+writes a summary to STDOUT, containing statistics from the run.
 .PP
 .SH OPTIONS
 .TP
@@ -152,8 +152,9 @@ exits 0 on success, and >0 if an error occurred.
 Testing random read performance on a raw partition:
 .IP
 .nf
-sh$ iohammer -f /dev/vnd0d -c 10k
-Size 1073741824: 121.097 secs, 10240 IOs, 0 writes, 84.6 IOs/sec, 11.83 ms average seek
+sh$ iohammer -f /dev/rvnd0d -c 10k
+Size 1073741824: 121.097 secs, 10240 IOs, 0 writes
+84.6 IOs/sec, 11.83 ms average seek
 .fi
 .LP
 .SH SEE ALSO
