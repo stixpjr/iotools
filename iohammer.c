@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.6 2003/07/28 01:42:21 stix Exp $ */
+/* $Id: iohammer.c,v 1.7 2003/10/12 05:54:07 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -31,42 +31,14 @@
  * possibility of such damage.
  */
 
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-
-#ifdef __APPLE__
-#include <dev/disk.h>
-#endif
+#include "iotools.h"
+#include "common.h"
 
 #ifdef BSD4_4
 #include <sys/disklabel.h>
 #endif
 
-#include <assert.h>
-#include <ctype.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
-#ifdef USE_PTHREADS
-#include <pthread.h>
-#endif
-
-#ifdef NEEDS_GETOPT
-#include <getopt.h>
-#endif
-
-#include "common.h"
-
-static char const rcsid[] = "$Id: iohammer.c,v 1.6 2003/07/28 01:42:21 stix Exp $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.7 2003/10/12 05:54:07 stix Exp stix $";
 
 /* Prototypes */
 static void	*doIO(void *);
@@ -77,10 +49,10 @@ static void	openfile(int **fds, char *name, int64_t *size,
 
 /* Globals */
 static int ignore, threads, type, writeLim, *fds;
-static volatile int aborted;
+static int flAborted;
 static long blockSize;
 static int64_t iolimit, fileBlocks;
-static volatile int64_t numio, numWrites;
+static int64_t numio, numWrites;
 
 #ifdef USE_PTHREADS
 static pthread_mutex_t lock;
@@ -111,7 +83,7 @@ main(int argc, char **argv)
 	/* Set defaults */
 	blockSize = 512;
 	strncpy(fileName, ".", sizeof(fileName)-1);
-	fileSize = 1048576L;
+	fileSize = 0;
 	ignore = 0;
 	numio = 0;
 	threads = 8;
@@ -119,7 +91,7 @@ main(int argc, char **argv)
 	unformatted = 0;
 	writePct = 0;
 
-	aborted = 0;
+	flAborted = 0;
 
 	while ((c = getopt(argc, argv, "raiub:c:w:t:s:f:?")) != EOF) {
 		switch (c) {
@@ -170,8 +142,11 @@ main(int argc, char **argv)
 
 	openfile(&fds, fileName, &fileSize, threads, writePct == 0 ?
 	    O_RDONLY : O_RDWR);
+	if (fileSize == 0)
+		fileSize = 1048576L;
+
 	if (!unformatted) {
-		printf("Size %lld: ", fileSize);
+		printf("Size %" PRId64 ": ", fileSize);
 		fflush(stdout);
 	}
 
@@ -206,7 +181,7 @@ main(int argc, char **argv)
 	/* wait for the threads to finish */
 	MYASSERT(pthread_mutex_lock(&lock) == 0,
 	    "pthread_mutex_lock failed");
-	while ((iolimit == 0 || numio < iolimit) && !aborted)
+	while ((iolimit == 0 || numio < iolimit) && !flAborted)
 		MYASSERT(pthread_cond_wait(&cond, &lock) == 0,
 		    "pthread_cond_wait failed");
 	MYASSERT(pthread_mutex_unlock(&lock) == 0,
@@ -260,7 +235,7 @@ main(int argc, char **argv)
 			fdmax = pipe_cnt_r[i];
 	}
 	fdmax++;
-	while ((iolimit == 0 || numio < iolimit) && !aborted) {
+	while ((iolimit == 0 || numio < iolimit) && !flAborted) {
 		FD_ZERO(&rdset);
 		for (i = 0; i < threads; i++)
 			if (pipe_cnt_r[i] >= 0)
@@ -272,7 +247,7 @@ main(int argc, char **argv)
 			break;
 		case -1:
 			if (errno != EINTR) {
-				aborted = 1;
+				flAborted = 1;
 				perror("select call failed");
 			}		/* fallthru */
 		default:
@@ -302,18 +277,21 @@ main(int argc, char **argv)
 	MYASSERT(gettimeofday(&endTime, NULL) == 0, "gettimeofday failed");
 	secs = endTime.tv_sec + endTime.tv_usec / 1000000.0
 	    - startTime.tv_sec - startTime.tv_usec / 1000000.0;
+	if (flAborted)
+		fprintf(stderr, "I/O aborted.\n");
 	if (unformatted) {
-		printf("%lld\t%d\t%ld\t%d\t%lld\t%lld\t%f\t%f\n", fileSize,
+		printf("%"PRId64"\t%d\t%ld\t%d\t%"PRId64"\t%"PRId64"\t%f\t%f\n",
+		    fileSize,
 		    threads, blockSize, writePct, numio, numWrites, secs,
 		    numio / secs);
 	} else {
-		printf("%.3f secs, %lld IOs, %lld writes, ", secs, numio,
-		    numWrites);
+		printf("%.3f secs, %"PRId64" IOs, %"PRId64" writes, ",
+		    secs, numio, numWrites);
 		printf("%.1f IOs/sec, %.2f ms average seek\n", numio / secs,
 		    secs / numio * 1000.0);
 	}
 
-	if (aborted)
+	if (flAborted)
 		for (i = 0; i < threads; i++)
 #ifdef USE_PTHREADS
 			pthread_cancel(tid[i]);
@@ -329,7 +307,8 @@ doIO(void *arg)
 	char tok;
 	int writeFlag, tid;
 	long seed;
-	off_t pos, ioRet;
+	off_t pos, seekRet;
+	ssize_t ioRet;
 	struct timeval tmout;
 	char *buf;
 
@@ -361,7 +340,7 @@ doIO(void *arg)
 			_exit(0);	/* finished */
 		}
 #endif
-		if ((ioRet = lseek(fds[tid], pos, SEEK_SET)) == -1) {
+		if ((seekRet = lseek(fds[tid], pos, SEEK_SET)) == -1) {
 			perror("lseek failed");
 			exit(1);
 		}
@@ -372,12 +351,13 @@ doIO(void *arg)
 			ioRet = read(fds[tid], buf, blockSize);
 			tok = 0;
 		}
-		if (ioRet != blockSize) {
-			fprintf(stderr, "%s I/O failed, offset %lld: %d (%s)\n",
+		if (ioRet == -1) {
+			fprintf(stderr, "%s I/O failed, offset %" PRId64
+			    ": %d (%s)\n",
 			    writeFlag ? "write" : "read",
 			    (int64_t)pos, errno, strerror(errno));
 			if (!ignore) {
-				aborted = 1;
+				flAborted = 1;
 #ifdef USE_PTHREADS
 				pthread_exit(0);
 #else
@@ -385,13 +365,19 @@ doIO(void *arg)
 #endif
 			}
 		}
+		if (ioRet < blockSize) {
+			fprintf(stderr, "short %s I/O, offset %" PRId64 ", %"
+			    PRId64 " bytes\n",
+			    writeFlag ? "write" : "read",
+			    (int64_t)pos, (int64_t)ioRet);
+		}
 #ifdef USE_PTHREADS
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
 		numio++;
 		if (writeFlag)
 			numWrites++;
-		if (aborted || (iolimit > 0 && numio + threads >= iolimit + 1))
+		if (flAborted || (iolimit > 0 && numio + threads >= iolimit + 1))
 			break;		/* finished */
 		MYASSERT(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock failed");
@@ -411,16 +397,12 @@ doIO(void *arg)
 
 
 static void
-openfile(int **fds, char *name, int64_t *size, int threads, int access)
+openfile(int **fds, char *name, int64_t *fileSize, int threads, int access)
 {
 	struct stat sb;
 	int fd, i, isTemp;
-	int64_t fileSize;
+	int64_t size;
 	char *blck;
-#ifdef __APPLE__
-	long blocks, blkSize;
-#endif
-
 	isTemp = fd = 0;
 
 	if (stat(name, &sb) != 0) {
@@ -429,7 +411,7 @@ openfile(int **fds, char *name, int64_t *size, int threads, int access)
 		exit(1);
 	}
 	if (S_ISDIR(sb.st_mode)) {
-		if (*size == 0) {
+		if (*fileSize == 0) {
 			fprintf(stderr, "Size must be specified for "
 			    "temporary files\n");
 			exit(1);
@@ -473,7 +455,7 @@ openfile(int **fds, char *name, int64_t *size, int threads, int access)
 		}
 		bzero(blck, 65536);
 		/* start with 64k blocks, for speed */
-		for (i = 0; i < (*size >> 16); i++) {
+		for (i = 0; i < (*fileSize >> 16); i++) {
 			if (write(fd, blck, 65536) != 65536) {
 				fprintf(stderr, "Write failed: %s\n",
 				    strerror(errno));
@@ -481,7 +463,7 @@ openfile(int **fds, char *name, int64_t *size, int threads, int access)
 			}
 		}
 		/* then individual bytes until we're there */
-		for (i = 0; i < (*size - ((*size >> 16) << 16)); i++) {
+		for (i = 0; i < (*fileSize - ((*fileSize >> 16) << 16)); i++) {
 			if (write(fd, blck, 1) != 1) {
 				fprintf(stderr, "Write failed: %s\n",
 				    strerror(errno));
@@ -492,28 +474,17 @@ openfile(int **fds, char *name, int64_t *size, int threads, int access)
 		free(blck);
 	} else {
 		/* Find the size of the file/device */
-		fileSize = sb.st_size;
-		if (*size == 0)
-			*size = fileSize;
+		size = sb.st_size;
+		if (*fileSize == 0)
+			*fileSize = size;
 		/* We have to do it the other way... */
-		if (*size == 0)
-			*size = lseek((*fds)[0], 0, SEEK_END);
-#ifdef __APPLE__
-		/* Have another go... */
-		if (*size == 0) {
-			if (ioctl((*fds)[0], DKIOCNUMBLKS, &blocks) == -1) {
-				fprintf(stderr, "ioctl(DKIOCNUMBLKS) failed: "
-				    "%s\n", strerror(errno));
-				exit(1);
-			}
-			if (ioctl((*fds)[0], DKIOCBLKSIZE, &blkSize) == -1) {
-				fprintf(stderr, "ioctl(DKIOCBLKSIZE) failed: "
-				    "%s\n", strerror(errno));
-				exit(1);
-			}
-			*size = ((int64_t)blocks) * blkSize;
+		if (*fileSize == 0)
+			*fileSize = lseek((*fds)[0], 0, SEEK_END);
+		if (*fileSize == 0) {
+			fprintf(stderr, "Unable to find the size of given "
+			    "file/device\n");
+			exit(1);
 		}
-#endif
 	}
 	if (fd > 0)
 		close(fd);
@@ -522,20 +493,20 @@ openfile(int **fds, char *name, int64_t *size, int threads, int access)
 static void
 cleanup(int sig)
 {
-	aborted = 1;
+	flAborted = 1;
 }
 
 static void
 usage()
 {
-	fprintf(stderr, "iohammer version " VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2003/07/28 01:42:21 $\n");
+	fprintf(stderr, "iohammer version " PACKAGE_VERSION ".\n"
+	    "Copyright Paul Ripke $Date: 2003/10/12 05:54:07 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else
 	fprintf(stderr, "Built to use multiple processes.\n\n");
 #endif
-	fprintf(stderr, "Usage: iohammer [-a | -r] [-i] [-b size] "
+	fprintf(stderr, "Usage: iohammer [-a | -r] [-iu] [-b size] "
 	    "[-c count] [-w write%%]\n");
 	fprintf(stderr, "                [-t threads] [-s size] "
 	    "[-f file/dir/dev]\n\n");
@@ -562,7 +533,7 @@ usage()
 	fprintf(stderr, "  size, threads, blocksize, write-pct, count, "
 	    "writes, seconds, rate\n\n");
 	fprintf(stderr, "Compiled defaults:\n");
-	fprintf(stderr, "    iohammer -a -b 1s -c 0 -w 0 -s 1m -f .\n\n");
+	fprintf(stderr, "    iohammer -a -b 1s -c 0 -t 8 -w 0 -s 1m -f .\n\n");
 	fprintf(stderr, "  Numeric arguments take an optional "
 	    "letter multiplier:\n");
 	fprintf(stderr, "    s:        Sectors (x 512)\n");
