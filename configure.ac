@@ -1,21 +1,17 @@
-dnl $Id$
+dnl $Id: configure.ac,v 1.1 2006/07/26 12:48:29 stix Exp $
 dnl
 dnl configure.in:
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(iotools, 20060417, stix@stix.id.au)
-AC_REVISION($Revision$)dnl
+AC_INIT(iotools, 20060626, stix@stix.id.au)
+AC_REVISION($Revision: 1.1 $)dnl
 
 AC_CONFIG_HEADER(config.h)
 AC_CONFIG_AUX_DIR(config)
-dnl AM_INIT_AUTOMAKE(iotools,IOTOOLS_VERSION)
 
 dnl Version string
-AC_SUBST(IOTOOLS_VERSION)
-AC_MSG_NOTICE([Configuring iotools $IOTOOLS_VERSION])
-AC_DEFINE_UNQUOTED(IOTOOLS_VERSION, ["$IOTOOLS_VERSION"], [iotools release version])
+AC_MSG_NOTICE([Configuring iotools $PACKAGE_VERSION])
 
-dnl AC_ARG_PROGRAM
 AC_ARG_ENABLE(pthreads, [
   --enable-pthreads       Attempt to compile with pthread support (recommended)
   --disable-pthreads      Use older, slower, multi-process code
