@@ -1,4 +1,4 @@
-/* $Id$ */
+/* $Id: common.c,v 1.1 2003/07/17 23:50:49 stix Exp stix $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -31,25 +31,10 @@
  * possibility of such damage.
  */
 
-#include <sys/types.h>
-
-#ifdef USE_SYSVSHM
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#else
-#include <sys/mman.h>
-#endif /* USE_SYSVSHM */
-
-#include <ctype.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
+#include "iotools.h"
 #include "common.h"
 
-static char const rcsid[] = "$Id$";
+static char const rcsid[] = "$Id: common.c,v 1.1 2003/07/17 23:50:49 stix Exp stix $";
 
 /*
  * getnum:
@@ -60,23 +45,23 @@ getnum(char *c)
 {
 	int64_t result = 0;
 
-	while (isdigit(*c)) {
+	while (isdigit((int)*c)) {
 		result = result * 10 + *c - '0';
 		c++;
 	}
-	if (tolower(*c) == 's')		/* sectors */
+	if (tolower((int)*c) == 's')		/* sectors */
 		result *= 512;
-	else if (tolower(*c) == 'k')	/* kibi */
+	else if (tolower((int)*c) == 'k')	/* kibi */
 		result *= 1024;
-	else if (tolower(*c) == 'm')	/* mebi */
+	else if (tolower((int)*c) == 'm')	/* mebi */
 		result *= 1048576LL;
-	else if (tolower(*c) == 'g')	/* gibi */
+	else if (tolower((int)*c) == 'g')	/* gibi */
 		result *= 1073741824LL;
-	else if (tolower(*c) == 't')	/* tebi */
+	else if (tolower((int)*c) == 't')	/* tebi */
 		result *= 1099511627776LL;
-	else if (tolower(*c) == 'p')	/* pebi */
+	else if (tolower((int)*c) == 'p')	/* pebi */
 		result *= 1125899906842624LL;
-	else if (tolower(*c) == 'e')	/* exbi */
+	else if (tolower((int)*c) == 'e')	/* exbi */
 		result *= 1152921504606846976LL;
 
 	return result;
