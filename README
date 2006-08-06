@@ -1,4 +1,4 @@
-  $Id: README,v 1.1 2003/10/12 06:19:06 stix Exp $
+  $Id: README,v 1.2 2006/07/26 13:01:01 stix Exp $
 
   iotools
 
@@ -74,7 +74,7 @@ without pthreads, I have decided it is not worth the trouble.
 
 WORKING TARGETS
 
-The 20060726 version using pthreads has been tested on:
+Version 2.0 using pthreads has been tested on:
 
 OS version			C Compiler version
 AIX 4.1.5 			xlC.C 3.1.4.7
