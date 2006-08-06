@@ -1,4 +1,4 @@
-.\" $Id: iohammer.1,v 1.2 2006/07/26 12:43:09 stix Exp $
+.\" $Id: iohammer.1,v 1.3 2006/08/06 09:30:50 stix Exp $
 .\" 
 .\" 
 .\" Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -159,6 +159,11 @@ Size 1073741824: 121.097 secs, 10240 IOs, 0 writes
 .LP
 .SH SEE ALSO
 .BR fblckgen (1),\  mbdd (1)
+.SH WARNING
+Prolonged running on a disk drive may cause the disk drive to fail.
+.PP
+Running on SAN LUNs in shared storage infrastructure configurations can
+impact performance of other systems using that shared infrastructure.
 .SH BUGS
 Size detection needs work, as it seems there is no standard, reliable method
 for determining the length of a raw device.
