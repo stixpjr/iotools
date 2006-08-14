@@ -1,4 +1,4 @@
-.\" $Id: mbdd.1,v 1.2 2006/07/26 12:46:12 stix Exp $
+.\" $Id: mbdd.1,v 1.3 2006/08/06 09:30:50 stix Exp $
 .\" 
 .\" 
 .\" Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -34,7 +34,6 @@
 .TH MBDD 1 2.0 iotools
 .SH NAME
 .B mbdd
-.Nd
 \- Multi Buffer dd
 .SH SYNOPSIS
 .B mbdd
@@ -82,20 +81,31 @@ Quiet operation, suppresses the printing of the summary line.
 All numeric arguments may take an optional letter suffix, similar to the
 .BR strsuftollx (3)
 function introduced in NetBSD.
-.IP
-s  sector; multiply by 512.
-.br
-k  kibibytes; multiply by 1024 or 2^10.
-.br
-m  mebibytes; multiply by 1048576 or 2^20.
-.br
-g  gibibytes; multiply by 2^30.
-.br
-t  tebibytes; multiply by 2^40.
-.br
-p  pebibytes; multiply by 2^50.
-.br
-e  exbibytes; multiply by 2^60.
+.RS
+.PD 0
+.TP
+s
+sector; multiply by 512.
+.TP
+k
+kibibytes; multiply by 1024 or 2^10.
+.TP
+m
+mebibytes; multiply by 1048576 or 2^20.
+.TP
+g
+gibibytes; multiply by 2^30.
+.TP
+t
+tebibytes; multiply by 2^40.
+.TP
+p
+pebibytes; multiply by 2^50.
+.TP
+e
+exbibytes; multiply by 2^60.
+.PD
+.RE
 .SH EXIT STATUS
 .B mbdd
 exits 0 on success, and >0 if an error occurred.
@@ -104,21 +114,25 @@ As a buffer between
 .BR tar (1)\ and
 .BR bzip2 (1),
 using a total of 20 MiB buffer space:
-.IP
+.sp
+.RS
 .nf
 sh$ time tar -cf - . | mbdd -n 320 | bzip2 > /tmp/arc.tar.bz2
 807311360 bytes transferred in 374.285 secs (2106.392 KiB/sec)
 88694 partial reads, 218.527 average buffers full
   374.37s real   311.43s user    18.64s system
 .fi
-.LP
+.RE
+.sp
 Compared to without:
-.IP
+.sp
+.RS
 .nf
 sh$ time tar -cf - . | bzip2 > /tmp/arc.tar.bz2
   556.37s real   307.44s user    11.60s system
 .fi
-.LP
+.RE
+.sp
 .SH SEE ALSO
 .BR fblckgen (1),\  iohammer (1)
 .SH BUGS

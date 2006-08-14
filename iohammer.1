@@ -1,4 +1,4 @@
-.\" $Id: iohammer.1,v 1.3 2006/08/06 09:30:50 stix Exp $
+.\" $Id: iohammer.1,v 1.4 2006/08/06 10:09:07 stix Exp $
 .\" 
 .\" 
 .\" Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -34,7 +34,6 @@
 .TH IOHAMMER 1 2.0 iotools
 .SH NAME
 .B iohammer
-.Nd
 \- Random I/O testing utility
 .SH SYNOPSIS
 .B iohammer
@@ -131,32 +130,45 @@ performed.
 All numeric arguments may take an optional letter suffix, similar to the
 .BR strsuftollx (3)
 function introduced in NetBSD.
-.IP
-s  sector; multiply by 512.
-.br
-k  kibibytes; multiply by 1024 or 2^10.
-.br
-m  mebibytes; multiply by 1048576 or 2^20.
-.br
-g  gibibytes; multiply by 2^30.
-.br
-t  tebibytes; multiply by 2^40.
-.br
-p  pebibytes; multiply by 2^50.
-.br
-e  exbibytes; multiply by 2^60.
+.RS
+.PD 0
+.TP
+s
+sector; multiply by 512.
+.TP
+k
+kibibytes; multiply by 1024 or 2^10.
+.TP
+m
+mebibytes; multiply by 1048576 or 2^20.
+.TP
+g
+gibibytes; multiply by 2^30.
+.TP
+t
+tebibytes; multiply by 2^40.
+.TP 
+p
+pebibytes; multiply by 2^50.
+.TP 
+e
+exbibytes; multiply by 2^60.
+.PD    
+.RE
 .SH EXIT STATUS
 .B iohammer
 exits 0 on success, and >0 if an error occurred.
 .SH EXAMPLES
 Testing random read performance on a raw partition:
-.IP
+.sp
+.RS
 .nf
 sh$ iohammer -f /dev/rvnd0d -c 10k
 Size 1073741824: 121.097 secs, 10240 IOs, 0 writes
 84.6 IOs/sec, 11.83 ms average seek
 .fi
-.LP
+.RE
+.sp
 .SH SEE ALSO
 .BR fblckgen (1),\  mbdd (1)
 .SH WARNING
