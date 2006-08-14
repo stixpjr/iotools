@@ -1,4 +1,4 @@
-.\" $Id: fblckgen.1,v 1.1 2006/07/26 12:22:21 stix Exp $
+.\" $Id: fblckgen.1,v 1.2 2006/08/06 09:30:50 stix Exp $
 .\" 
 .\" 
 .\" Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -34,7 +34,6 @@
 .TH FBLCKGEN 1 2.0 iotools
 .SH NAME
 .B fblckgen
-.Nd
 \- Fast block generator
 .SH SYNOPSIS
 .B fblckgen
@@ -94,32 +93,45 @@ to generate a pseudo-random sequence, based on an inlined copy of
 All numeric arguments may take an optional letter suffix, similar to the
 .BR strsuftollx (3)
 function introduced in NetBSD.
-.IP
-s  sector; multiply by 512.
-.br
-k  kibibytes; multiply by 1024 or 2^10.
-.br
-m  mebibytes; multiply by 1048576 or 2^20.
-.br
-g  gibibytes; multiply by 2^30.
-.br
-t  tebibytes; multiply by 2^40.
-.br
-p  pebibytes; multiply by 2^50.
-.br
-e  exbibytes; multiply by 2^60.
+.RS
+.PD 0
+.TP
+s
+sector; multiply by 512.
+.TP
+k
+kibibytes; multiply by 1024 or 2^10.
+.TP
+m
+mebibytes; multiply by 1048576 or 2^20.
+.TP
+g
+gibibytes; multiply by 2^30.
+.TP
+t
+tebibytes; multiply by 2^40.
+.TP 
+p
+pebibytes; multiply by 2^50.
+.TP 
+e
+exbibytes; multiply by 2^60.
+.PD    
+.RE
 .SH EXIT STATUS
 .B fblckgen
 exits 0 on success, and >0 if an error occurred.
 .SH EXAMPLES
 Filling an LTO1 tape with pseudo-random data:
-.IP
+.sp
+.RS
 .nf
 sh$ fblckgen -rb 64k -c 0 > /dev/nrst1
 Write failed: Input/output error
 105722740736 bytes written in 7064.506 secs (14614.590 KB/sec)
 .fi
-.LP
+.RE
+.sp
 .SH SEE ALSO
 .BR iohammer (1),\  mbdd (1)
 .SH AUTHOR
