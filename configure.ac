@@ -1,10 +1,10 @@
-dnl $Id: configure.ac,v 1.2 2006/07/26 14:44:44 stix Exp $
+dnl $Id: configure.ac,v 1.3 2006/08/06 09:30:50 stix Exp $
 dnl
 dnl configure.in:
 dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT(iotools, 2.0, stix@stix.id.au)
-AC_REVISION($Revision: 1.2 $)dnl
+AC_REVISION($Revision: 1.3 $)dnl
 
 AC_CONFIG_HEADER(config.h)
 AC_CONFIG_AUX_DIR(config)
@@ -50,6 +50,18 @@ if test $use_pthreads = yes; then
 		AC_CHECK_LIB(pthreads, main)
 		if test $ac_cv_lib_pthreads_main = no; then
 			AC_MSG_WARN([pthread library not found, continuing anyway])
+		fi
+	fi
+	dnl Now check for pthread.h
+	AC_CHECK_HEADERS([pthread.h])
+	dnl If that check fails, try with "-pthread" compiler option
+	if test $ac_cv_header_pthread_h = no; then
+		AC_MSG_WARN([pthread header check failed, retrying])
+		CPPFLAGS="${CPPFLAGS} -pthread"
+		unset ac_cv_header_pthread_h
+		AC_CHECK_HEADERS([pthread.h])
+		if test $ac_cv_header_pthread_h = no; then
+			AC_MSG_WARN([pthread header may not be usable])
 		fi
 	fi
 	AC_DEFINE(USE_PTHREADS, 1, [Define to attempt to use pthreads])
@@ -108,8 +120,30 @@ AC_TRY_LINK([
 
 dnl If we don't have inttypes.h, work out how to printf
 dnl long long, int64_t, and define PRId64 appropriately
+dnl Note: Tru64 5.1B has inttypes.h, but doesn't have PRId64!
+dnl       So first check for PRId64 in inttypes.h
+
 can_printf_longlong=no
-if test $ac_cv_header_inttypes_h = no -a $ac_cv_type_long_long = yes; then
+if test $ac_cv_header_inttypes_h = yes -a $ac_cv_type_long_long = yes; then
+	dnl check for PRId64
+	AC_MSG_CHECKING([for PRId64])
+	AC_TRY_RUN([
+#include <stdio.h>
+#include <inttypes.h>
+int main() {
+	char buf[100];
+	sprintf(buf, "%" PRId64, 4294967300LL);
+	return (strcmp(buf, "4294967300"));
+}
+	], [
+		AC_MSG_RESULT(yes)
+		can_printf_longlong=yes
+	], [
+		AC_MSG_RESULT(no)
+	], [ : ])
+fi
+
+if test $can_printf_longlong = no -a $ac_cv_type_long_long = yes; then
 	dnl try %lld
 	AC_MSG_CHECKING([*printf() support for %lld])
 	AC_TRY_RUN([
