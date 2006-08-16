@@ -1,4 +1,4 @@
-#	$Id$
+#	$Id: Makefile.in,v 1.2 2006/07/26 12:11:14 stix Exp $
 #
 
 srcdir	= @srcdir@
@@ -54,7 +54,12 @@ install: all
 	done
 
 clean:
-	rm -f core ${ALLPROGS} ${OBJS}
+	rm -f core ${ALLPROGS} ${OBJS} *.html
 
 distclean: clean
 	rm -f Makefile config.cache config.log config.status config.h
+
+rman:
+	@for i in ${PROGS}; do \
+		rman -f html -r '' < $$i.1 > $$i.html; \
+	done
