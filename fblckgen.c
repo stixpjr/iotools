@@ -1,4 +1,4 @@
-/* $Id: fblckgen.c,v 1.7 2003/10/12 06:16:15 stix Exp $ */
+/* $Id: fblckgen.c,v 1.8 2006/07/26 12:15:44 stix Exp $ */
 
 /*
  * Copyright (c) 2004 Paul Ripke. All rights reserved.
@@ -34,7 +34,7 @@
 #include "iotools.h"
 #include "common.h"
 
-static char const rcsid[] = "$Id: fblckgen.c,v 1.7 2003/10/12 06:16:15 stix Exp $";
+static char const rcsid[] = "$Id: fblckgen.c,v 1.8 2006/07/26 12:15:44 stix Exp $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);
@@ -197,9 +197,9 @@ main(int argc, char **argv)
 		
 	}
 	MYASSERT(gettimeofday(&tpend, NULL) == 0, "gettimeofday failed");
+	if (flAborted)
+		fprintf(stderr, "Transfer aborted.\n");
 	if (!flQuiet) {
-		if (flAborted)
-			fprintf(stderr, "Transfer aborted.\n");
 		duration = tpend.tv_sec + tpend.tv_usec / 1000000.0 -
 		    tpstart.tv_sec - tpstart.tv_usec / 1000000.0;
 		fprintf(stderr, "%" PRId64
@@ -263,7 +263,7 @@ static void
 usage()
 {
 	fprintf(stderr, "fblckgen version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2003/10/12 06:16:15 $\n");
+	    "Copyright Paul Ripke $Date: 2006/07/26 12:15:44 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else   

@@ -1,4 +1,4 @@
-/* $Id$ */
+/* $Id: mbdd.c,v 1.1 2006/07/26 12:23:34 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id$";
+static char const rcsid[] = "$Id: mbdd.c,v 1.1 2006/07/26 12:23:34 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
@@ -182,9 +182,9 @@ main(int argc, char **argv)
 	MYASSERT(gettimeofday(&tpend, NULL) == 0, "gettimeofday failed");
 	duration = tpend.tv_sec + tpend.tv_usec / 1000000.0 -
 	    tpstart.tv_sec - tpstart.tv_usec / 1000000.0;
+	if (flAborted)
+		fprintf(stderr, "Transfer aborted.\n");
 	if (!flQuiet) {
-		if (flAborted)
-			fprintf(stderr, "Transfer aborted.\n");
 		fprintf(stderr, "%" PRId64
 		    " bytes transferred in %.3f secs (%.3f KiB/sec)\n"
 		    "%ld partial read%s, %.3f average buffers full\n",
@@ -264,12 +264,13 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2003/10/12 06:16:15 $\n");
+	    "Copyright Paul Ripke $Date: 2006/07/26 12:23:34 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
-	fprintf(stderr, "Usage: mbdd [-b bytes] [-n number]\n\n");
+	fprintf(stderr, "Usage: mbdd [-b bytes] [-n number] [-q]\n\n");
 	fprintf(stderr, "  -b bytes    Set buffer size\n");
-	fprintf(stderr, "  -n number   Number of buffers\n\n");
+	fprintf(stderr, "  -n number   Number of buffers\n");
+	fprintf(stderr, "  -q          Quiet operation\n\n");
 	fprintf(stderr, "Compiled defaults:\n");
 	fprintf(stderr, "    mbdd -b 64k -n 16\n\n");
 	fprintf(stderr, "Numeric arguments take an optional "
