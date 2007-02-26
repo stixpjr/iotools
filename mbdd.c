@@ -1,4 +1,4 @@
-/* $Id: mbdd.c,v 1.1 2006/07/26 12:23:34 stix Exp $ */
+/* $Id: mbdd.c,v 1.2 2006/10/25 03:51:16 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id: mbdd.c,v 1.1 2006/07/26 12:23:34 stix Exp $";
+static char const rcsid[] = "$Id: mbdd.c,v 1.2 2006/10/25 03:51:16 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
@@ -112,8 +112,10 @@ main(int argc, char **argv)
 	}
 	for (i = 0; i < numBufs; i++)
 		if ((buf[i] = (char *)malloc(bufSize)) == NULL) {
-			fprintf(stderr, "malloc for %ld bytes failed.\n",
-			        bufSize * 2);
+			fprintf(stderr, "malloc for %lu byte buffer failed.\n"
+				"Successfully allocated %d buffers, "
+				"%lu bytes\n",
+			        bufSize, i, bufSize * i);
 			exit(1);
 		}
 	flAborted = 0;
@@ -264,7 +266,7 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2006/07/26 12:23:34 $\n");
+	    "Copyright Paul Ripke $Date: 2006/10/25 03:51:16 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
 	fprintf(stderr, "Usage: mbdd [-b bytes] [-n number] [-q]\n\n");
