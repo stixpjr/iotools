@@ -1,4 +1,4 @@
-/* $Id: mbdd.c,v 1.2 2006/10/25 03:51:16 stix Exp $ */
+/* $Id: mbdd.c,v 1.3 2007/02/26 08:37:52 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id: mbdd.c,v 1.2 2006/10/25 03:51:16 stix Exp $";
+static char const rcsid[] = "$Id: mbdd.c,v 1.3 2007/02/26 08:37:52 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
@@ -146,9 +146,12 @@ main(int argc, char **argv)
 		/* wait for block of data */
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
-		while (fullBufs == 0)
+		while (fullBufs == 0) {
 			MYASSERT(pthread_cond_wait(&more, &lock) == 0,
 			    "pthread_cond_wait failed");
+			if (flAborted)
+				goto outwriter;
+		}
 		MYASSERT(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock failed");
 		/* write it */
@@ -170,7 +173,8 @@ main(int argc, char **argv)
 			break;
 		}
 		totalWritten += numWrite;
-		bufNum = (bufNum + 1) % numBufs;
+		if (++bufNum >= numBufs)
+			bufNum = 0;
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
 		fullBufs--;
@@ -181,6 +185,7 @@ main(int argc, char **argv)
 		    "pthread_mutex_unlock failed");
 		bufSamples++;
 	}
+outwriter:
 	MYASSERT(gettimeofday(&tpend, NULL) == 0, "gettimeofday failed");
 	duration = tpend.tv_sec + tpend.tv_usec / 1000000.0 -
 	    tpstart.tv_sec - tpstart.tv_usec / 1000000.0;
@@ -191,12 +196,13 @@ main(int argc, char **argv)
 		    " bytes transferred in %.3f secs (%.3f KiB/sec)\n"
 		    "%ld partial read%s, %.3f average buffers full\n",
 		    totalWritten, duration,
-		    (float)totalWritten / duration / 1024.0,
+		    duration > 0 ?
+		      (float)totalWritten / duration / 1024.0 : 0.0,
 		    partialReads, partialReads != 1 ? "s" : "",
-		    (float)bufSum / bufSamples);
+		    bufSamples > 0 ? (float)bufSum / bufSamples : 0.0);
 	}
 	if (flAborted)
-		MYASSERT(pthread_cancel(tid) == 0, "pthread_cancel failed");
+		pthread_cancel(tid);
 
 	return 0;
 }
@@ -232,6 +238,7 @@ reader(void *dummy)
 				default:
 					perror("Read failed");
 					flAborted = 1;
+					pthread_cond_signal(&more);
 					return NULL;
 				}
 			}
@@ -244,7 +251,8 @@ reader(void *dummy)
 				partialReads++;
 			totalRead += numRead;
 		} while (totalRead != bufSize);
-		bufNum = (bufNum + 1) % numBufs;
+		if (++bufNum >= numBufs)
+			bufNum = 0;
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
 		fullBufs++;
@@ -266,7 +274,7 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2006/10/25 03:51:16 $\n");
+	    "Copyright Paul Ripke $Date: 2007/02/26 08:37:52 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
 	fprintf(stderr, "Usage: mbdd [-b bytes] [-n number] [-q]\n\n");
