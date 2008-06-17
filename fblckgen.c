@@ -1,4 +1,4 @@
-/* $Id: fblckgen.c,v 1.8 2006/07/26 12:15:44 stix Exp $ */
+/* $Id: fblckgen.c,v 1.9 2006/10/25 03:51:16 stix Exp $ */
 
 /*
  * Copyright (c) 2004 Paul Ripke. All rights reserved.
@@ -34,7 +34,7 @@
 #include "iotools.h"
 #include "common.h"
 
-static char const rcsid[] = "$Id: fblckgen.c,v 1.8 2006/07/26 12:15:44 stix Exp $";
+static char const rcsid[] = "$Id: fblckgen.c,v 1.9 2006/10/25 03:51:16 stix Exp $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);
@@ -160,7 +160,8 @@ main(int argc, char **argv)
 	signal(SIGINT, &cleanup);
 	MYASSERT(gettimeofday(&tpstart, NULL) == 0, "gettimeofday failed");
 	for (i = 0; !flAborted && (numBlocks == 0 || i < numBlocks); i++) {
-		/* wait for block of data */
+		/* tell child to make another */
+		/* and wait for block of data */
 #ifdef USE_PTHREADS
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
@@ -172,7 +173,6 @@ main(int argc, char **argv)
 #else
 		MYASSERT(read(ctl1[0], &c, 1) == 1, "read on pipe failed");
 
-		/* tell child to make another */
 		MYASSERT(write(ctl2[1], &c, 1) == 1, "Write on pipe failed");
 #endif
 		/* write it */
@@ -200,8 +200,8 @@ main(int argc, char **argv)
 	if (flAborted)
 		fprintf(stderr, "Transfer aborted.\n");
 	if (!flQuiet) {
-		duration = tpend.tv_sec + tpend.tv_usec / 1000000.0 -
-		    tpstart.tv_sec - tpstart.tv_usec / 1000000.0;
+		duration = tpend.tv_sec - tpstart.tv_sec +
+		    (tpend.tv_usec - tpstart.tv_usec) / 1000000.0;
 		fprintf(stderr, "%" PRId64
 		    " bytes written in %.3f secs (%.3f KiB/sec)\n",
 		    (int64_t)i * blockSize,
@@ -209,7 +209,7 @@ main(int argc, char **argv)
 	}
 	if (flAborted)
 #ifdef USE_PTHREADS
-		MYASSERT(pthread_cancel(tid) == 0, "pthread_cancel failed");
+		pthread_cond_signal(&less);
 #else
 		kill(pid, SIGTERM);
 #endif
@@ -230,7 +230,7 @@ makeBlocks(void *dummy)
 #ifdef USE_PTHREADS
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
-		while (nblocks > 1)
+		while (nblocks > 1 && !flAborted)
 			MYASSERT(pthread_cond_wait(&less, &lock) == 0,
 			    "pthread_cond_wait failed");
 		MYASSERT(pthread_mutex_unlock(&lock) == 0,
@@ -263,7 +263,7 @@ static void
 usage()
 {
 	fprintf(stderr, "fblckgen version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2006/07/26 12:15:44 $\n");
+	    "Copyright Paul Ripke $Date: 2006/10/25 03:51:16 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else   
