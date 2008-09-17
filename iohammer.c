@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.8 2006/07/26 12:17:26 stix Exp $ */
+/* $Id: iohammer.c,v 1.9 2006/07/26 12:43:09 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -38,10 +38,11 @@
 #include <sys/disklabel.h>
 #endif
 
-static char const rcsid[] = "$Id: iohammer.c,v 1.8 2006/07/26 12:17:26 stix Exp $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.9 2006/07/26 12:43:09 stix Exp $";
 
 /* Prototypes */
 static void	*doIO(void *);
+static void	*status(void *);
 static void	cleanup(int);
 static void	usage();
 static void	openfile(int **fds, char *name, int64_t *size,
@@ -65,12 +66,13 @@ int
 main(int argc, char **argv)
 {
 	int c, i, unformatted, writePct;
+	int flVerbose;
 	int64_t fileSize;
 	float secs;
 	struct timeval startTime, endTime;
 	char fileName[PATH_MAX];
 #ifdef USE_PTHREADS
-	pthread_t *tid;
+	pthread_t *tid, status_tid;
 	pthread_attr_t attr;
 #else
 	char tok;
@@ -90,10 +92,11 @@ main(int argc, char **argv)
 	type = ALPHADATA;
 	unformatted = 0;
 	writePct = 0;
+	flVerbose = 0;
 
 	flAborted = 0;
 
-	while ((c = getopt(argc, argv, "raiub:c:w:t:s:f:?")) != EOF) {
+	while ((c = getopt(argc, argv, "raiuvb:c:w:t:s:f:?")) != EOF) {
 		switch (c) {
 		case 'a':
 			type = ALPHADATA;
@@ -128,6 +131,9 @@ main(int argc, char **argv)
 		case 'u':
 			unformatted = 1;
 			break;
+		case 'v':
+			flVerbose = 1;
+			break;
 		case 'w':
 			writePct = atoi(optarg);
 			if (writePct > 100)
@@ -148,6 +154,8 @@ main(int argc, char **argv)
 	if (!unformatted) {
 		printf("Size %" PRId64 ": ", fileSize);
 		fflush(stdout);
+		if (flVerbose)
+			fputc('\n', stderr);
 	}
 
 	writeLim = (writePct << 10) / 100;
@@ -177,6 +185,10 @@ main(int argc, char **argv)
 	    "pthread_attr_destroy failed");
 
 	MYASSERT(gettimeofday(&startTime, NULL) == 0, "gettimeofday failed");
+	if (flVerbose) {
+		MYASSERT(pthread_create(&status_tid, NULL, &status, NULL) == 0,
+		    "pthread_create failed");
+	}
 
 	/* wait for the threads to finish */
 	MYASSERT(pthread_mutex_lock(&lock) == 0,
@@ -186,6 +198,8 @@ main(int argc, char **argv)
 		    "pthread_cond_wait failed");
 	MYASSERT(pthread_mutex_unlock(&lock) == 0,
 	    "pthread_mutex_unlock failed");
+	if (flVerbose)
+		pthread_join(status_tid, NULL);
 #else
 	MYASSERT((pid = malloc(threads * sizeof(pid_t))) != NULL,
 	    "malloc failed");
@@ -272,6 +286,8 @@ main(int argc, char **argv)
 						pipe_cnt_r[i] = -1;
 				}
 		}
+		if (flVerbose)
+			statusLine(numio, iolimit, "IOs", "IO/s");
 	}
 #endif
 	MYASSERT(gettimeofday(&endTime, NULL) == 0, "gettimeofday failed");
@@ -395,6 +411,16 @@ doIO(void *arg)
 	return NULL;
 }
 
+static void *
+status(void *dummy)
+{
+	while (!flAborted && ((numio < iolimit) || (iolimit == 0))) { //stix
+		statusLine(numio, iolimit, "IOs", "IO/s");
+		usleep(STATUS_UPDATE_TIME);
+	}
+	fputc('\n', stderr);
+	return 0;
+}
 
 static void
 openfile(int **fds, char *name, int64_t *fileSize, int threads, int access)
@@ -500,7 +526,7 @@ static void
 usage()
 {
 	fprintf(stderr, "iohammer version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2006/07/26 12:17:26 $\n");
+	    "Copyright Paul Ripke $Date: 2006/07/26 12:43:09 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else

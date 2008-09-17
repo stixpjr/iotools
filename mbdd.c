@@ -1,4 +1,4 @@
-/* $Id: mbdd.c,v 1.4 2007/10/26 05:45:32 stix Exp $ */
+/* $Id: mbdd.c,v 1.5 2008/09/17 10:17:19 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,10 +38,11 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id: mbdd.c,v 1.4 2007/10/26 05:45:32 stix Exp $";
+static char const rcsid[] = "$Id: mbdd.c,v 1.5 2008/09/17 10:17:19 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
+static void	*status(void *);
 static void	cleanup(int);
 static void	usage();
 
@@ -50,6 +51,7 @@ static char **buf;
 static long bufSize, partialReads;
 static int flAborted, flFinished, numBufs;
 static size_t remainder;
+static int64_t totalWritten;
 
 static pthread_mutex_t lock;
 static pthread_cond_t less;
@@ -62,11 +64,12 @@ main(int argc, char **argv)
 	int bufNum, c, i, outfd, flQuiet;
 	ssize_t numWrite, writeSize;
 	unsigned long bufSum, bufSamples;
-	int64_t totalWritten;
 	float duration;
 	struct timeval tpstart, tpend;
 	pthread_t tid;
 	pthread_attr_t attr;
+	pthread_t status_tid;
+	int flVerbose = 0;
 
 	/* close off stdout, so stdio doesn't play with it */
 	outfd = dup(STDOUT_FILENO);
@@ -81,7 +84,7 @@ main(int argc, char **argv)
 	numBufs = 16;
 	flQuiet = 0;
 
-	while ((c = getopt(argc, argv, "b:n:q")) != EOF) {
+	while ((c = getopt(argc, argv, "b:n:qv")) != EOF) {
 		switch (c) {
 		case 'b':
 			bufSize = getnum(optarg);
@@ -91,6 +94,9 @@ main(int argc, char **argv)
 			break;
 		case 'q':
 			flQuiet = 1;
+			break;
+		case 'v':
+			flVerbose = 1;
 			break;
 		case '?':
 		default:
@@ -140,6 +146,11 @@ main(int argc, char **argv)
 	    "pthread_create failed");
 	MYASSERT(pthread_attr_destroy(&attr) == 0,
 	    "pthread_attr_destroy failed");
+	if (flVerbose) {
+		MYASSERT(pthread_create(&status_tid, NULL,
+			&status, NULL) == 0,
+			"pthread_create failed");
+	}
 	signal(SIGINT, &cleanup);
 	MYASSERT(gettimeofday(&tpstart, NULL) == 0, "gettimeofday failed");
 	while (!flAborted && !(flFinished && fullBufs == 0)) {
@@ -188,6 +199,8 @@ main(int argc, char **argv)
 	MYASSERT(gettimeofday(&tpend, NULL) == 0, "gettimeofday failed");
 	duration = tpend.tv_sec + tpend.tv_usec / 1000000.0 -
 	    tpstart.tv_sec - tpstart.tv_usec / 1000000.0;
+	if (flVerbose)
+		pthread_join(status_tid, NULL);
 	if (flAborted)
 		fprintf(stderr, "Transfer aborted.\n");
 	if (!flQuiet) {
@@ -263,6 +276,17 @@ reader(void *dummy)
 	return NULL;
 }
 
+static void *
+status(void *dummy)
+{
+	while (!flAborted && !flFinished) {
+		statusLine(totalWritten / 1024, 0, "KiB", "KiB/s");
+		usleep(STATUS_UPDATE_TIME);
+	}
+	fputc('\n', stderr);
+	return 0;
+}
+
 static void
 cleanup(int sig)
 {
@@ -273,13 +297,14 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2007/10/26 05:45:32 $\n");
+	    "Copyright Paul Ripke $Date: 2008/09/17 10:17:19 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
 	fprintf(stderr, "Usage: mbdd [-b bytes] [-n number] [-q]\n\n");
 	fprintf(stderr, "  -b bytes    Set buffer size\n");
 	fprintf(stderr, "  -n number   Number of buffers\n");
-	fprintf(stderr, "  -q          Quiet operation\n\n");
+	fprintf(stderr, "  -q          Quiet operation\n");
+	fprintf(stderr, "  -v          Display progress line\n\n");
 	fprintf(stderr, "Compiled defaults:\n");
 	fprintf(stderr, "    mbdd -b 64k -n 16\n\n");
 	fprintf(stderr, "Numeric arguments take an optional "

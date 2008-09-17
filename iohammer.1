@@ -1,4 +1,4 @@
-.\" $Id: iohammer.1,v 1.5 2006/08/14 06:05:19 stix Exp $
+.\" $Id: iohammer.1,v 1.6 2008/09/17 10:07:45 stix Exp $
 .\" 
 .\" 
 .\" Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 .SH SYNOPSIS
 .B iohammer
 .RB [ \-a | \-r ]
-.RB [ \-iu ]
+.RB [ \-iuv ]
 .RB [ \-b
 .IR blocksize ]
 .RB [ \-c
@@ -121,6 +121,9 @@ Specifies the number of I/O threads to use. Defaults to 8.
 .B \-u
 Unformatted output. Generate a numeric, tab separated summary line suitable for
 parsing by scripts.
+.TP
+.B \-v
+Verbose: regularly prints a status line showing current progress.
 .TP
 .BI \-w\  write%
 Specifies the approximate ratio of reads to writes. If `0', the default,

@@ -1,4 +1,4 @@
-.\" $Id: mbdd.1,v 1.5 2006/10/25 03:51:16 stix Exp $
+.\" $Id: mbdd.1,v 1.6 2008/09/17 10:07:45 stix Exp $
 .\" 
 .\" 
 .\" Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -42,6 +42,7 @@
 .RB [ \-n
 .IR number ]
 .RB [ \-q ]
+.RB [ \-v ]
 .SH DESCRIPTION
 .B mbdd
 is a threaded version of dd, without all the extras. It maintains a number of
@@ -78,6 +79,9 @@ of buffers to allocate and use in the circular queue. Defaults to 16.
 .TP
 .B \-q
 Quiet operation, suppresses the printing of the summary line.
+.TP
+.B \-v
+Verbose: regularly prints a status line showing current progress.
 .LP
 All numeric arguments may take an optional letter suffix, similar to the
 .BR strsuftollx (3)
