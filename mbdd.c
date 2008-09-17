@@ -1,4 +1,4 @@
-/* $Id: mbdd.c,v 1.3 2007/02/26 08:37:52 stix Exp $ */
+/* $Id: mbdd.c,v 1.4 2007/10/26 05:45:32 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id: mbdd.c,v 1.3 2007/02/26 08:37:52 stix Exp $";
+static char const rcsid[] = "$Id: mbdd.c,v 1.4 2007/10/26 05:45:32 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
@@ -146,12 +146,12 @@ main(int argc, char **argv)
 		/* wait for block of data */
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
-		while (fullBufs == 0) {
+		while (fullBufs == 0 && !flAborted) {
 			MYASSERT(pthread_cond_wait(&more, &lock) == 0,
 			    "pthread_cond_wait failed");
-			if (flAborted)
-				goto outwriter;
 		}
+		if (flAborted)
+			break;
 		MYASSERT(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock failed");
 		/* write it */
@@ -185,7 +185,6 @@ main(int argc, char **argv)
 		    "pthread_mutex_unlock failed");
 		bufSamples++;
 	}
-outwriter:
 	MYASSERT(gettimeofday(&tpend, NULL) == 0, "gettimeofday failed");
 	duration = tpend.tv_sec + tpend.tv_usec / 1000000.0 -
 	    tpstart.tv_sec - tpstart.tv_usec / 1000000.0;
@@ -274,7 +273,7 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2007/02/26 08:37:52 $\n");
+	    "Copyright Paul Ripke $Date: 2007/10/26 05:45:32 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
 	fprintf(stderr, "Usage: mbdd [-b bytes] [-n number] [-q]\n\n");
