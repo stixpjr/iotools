@@ -1,4 +1,4 @@
-/* $Id: common.h,v 1.3 2003/07/23 14:51:39 stix Exp stix $ */
+/* $Id: common.h,v 1.4 2006/07/26 12:12:38 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -43,6 +43,12 @@
 #endif
 
 /*
+ * how often to update the verbose/status type line, in us
+ */
+
+#define STATUS_UPDATE_TIME	500000L
+
+/*
  * Custom assert which won't be disabled with "NDEBUG".
  */
 #define MYASSERT(expr, err)				\
@@ -69,5 +75,6 @@ unsigned long __seed;
 int64_t	getnum(char *);
 void	initblock(char *, long, dataType, int64_t);
 void	*getshm(long size);
+void	statusLine(float, float, const char *, const char *);
 
 #endif /* !COMMON_H */

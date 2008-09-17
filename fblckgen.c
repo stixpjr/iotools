@@ -1,4 +1,4 @@
-/* $Id: fblckgen.c,v 1.9 2006/10/25 03:51:16 stix Exp $ */
+/* $Id: fblckgen.c,v 1.10 2008/06/17 10:37:59 stix Exp $ */
 
 /*
  * Copyright (c) 2004 Paul Ripke. All rights reserved.
@@ -34,10 +34,11 @@
 #include "iotools.h"
 #include "common.h"
 
-static char const rcsid[] = "$Id: fblckgen.c,v 1.9 2006/10/25 03:51:16 stix Exp $";
+static char const rcsid[] = "$Id: fblckgen.c,v 1.10 2008/06/17 10:37:59 stix Exp $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);
+static void	*status(void *);
 static void	cleanup(int);
 static void	usage();
 
@@ -45,8 +46,10 @@ static void	usage();
 static char *buf[2];
 static int type;
 static int flAborted;
+static int flFinished;
 static long blockSize;
 static int64_t numBlocks;
+static int64_t blocksWritten;
 static int outfd;
 
 #ifdef USE_PTHREADS
@@ -63,14 +66,15 @@ main(int argc, char **argv)
 {
 	int c;
 	int flQuiet;
+	int flVerbose;
 	int64_t numWritten;
-	int64_t i;
 	float duration;
 	void *buffer;
 	struct timeval tpstart, tpend;
 #ifdef USE_PTHREADS
 	pthread_t tid;
 	pthread_attr_t attr;
+	pthread_t status_tid;
 #else
 	pid_t pid;
 #endif
@@ -87,8 +91,9 @@ main(int argc, char **argv)
 	numBlocks = 1024;
 	type = ALPHADATA;
 	flQuiet = 0;
+	flVerbose = 0;
 
-	while ((c = getopt(argc, argv, "arb:c:q")) != EOF) {
+	while ((c = getopt(argc, argv, "arb:c:qv")) != EOF) {
 		switch (c) {
 		case 'a':
 			type = ALPHADATA;
@@ -104,6 +109,9 @@ main(int argc, char **argv)
 			break;
 		case 'q':
 			flQuiet = 1;
+			break;
+		case 'v':
+			flVerbose = 1;
 			break;
 		case '?':
 		default:
@@ -144,6 +152,10 @@ main(int argc, char **argv)
 	    "pthread_create failed");
 	MYASSERT(pthread_attr_destroy(&attr) == 0,
 	    "pthread_attr_destroy failed");
+	if (flVerbose) {
+		MYASSERT(pthread_create(&status_tid, NULL, &status, NULL) == 0,
+		    "pthread_create failed");
+	}
 #else
 	MYASSERT(pipe(&ctl1[0]) == 0, "pipe failed");
 	MYASSERT(pipe(&ctl2[0]) == 0, "pipe failed");
@@ -159,7 +171,8 @@ main(int argc, char **argv)
 #endif
 	signal(SIGINT, &cleanup);
 	MYASSERT(gettimeofday(&tpstart, NULL) == 0, "gettimeofday failed");
-	for (i = 0; !flAborted && (numBlocks == 0 || i < numBlocks); i++) {
+	for (blocksWritten = 0; !flAborted &&
+	    (numBlocks == 0 || blocksWritten < numBlocks); blocksWritten++) {
 		/* tell child to make another */
 		/* and wait for block of data */
 #ifdef USE_PTHREADS
@@ -176,7 +189,7 @@ main(int argc, char **argv)
 		MYASSERT(write(ctl2[1], &c, 1) == 1, "Write on pipe failed");
 #endif
 		/* write it */
-		numWritten = write(outfd, buf[i & 1], blockSize);
+		numWritten = write(outfd, buf[blocksWritten & 1], blockSize);
 		if (numWritten != blockSize) {
 			if (numWritten > 0) {
 				fprintf(stderr, "Short write: "
@@ -185,6 +198,12 @@ main(int argc, char **argv)
 				perror("Write failed");
 			break;
 		}
+#ifndef USE_PTHREADS
+		if (flVerbose)
+			statusLine(blocksWritten * blockSize / 1024,
+				numBlocks * blockSize / 1024,
+				"KiB", "KiB/s");
+#endif
 #ifdef USE_PTHREADS
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
@@ -197,6 +216,11 @@ main(int argc, char **argv)
 		
 	}
 	MYASSERT(gettimeofday(&tpend, NULL) == 0, "gettimeofday failed");
+	flFinished = 1;
+#ifdef USE_PTHREADS
+	if (flVerbose)
+		pthread_join(status_tid, NULL);
+#endif
 	if (flAborted)
 		fprintf(stderr, "Transfer aborted.\n");
 	if (!flQuiet) {
@@ -204,8 +228,8 @@ main(int argc, char **argv)
 		    (tpend.tv_usec - tpstart.tv_usec) / 1000000.0;
 		fprintf(stderr, "%" PRId64
 		    " bytes written in %.3f secs (%.3f KiB/sec)\n",
-		    (int64_t)i * blockSize,
-		    duration, (float)i * blockSize / duration / 1024.0);
+		    (int64_t)blocksWritten * blockSize,
+		    duration, (float)blocksWritten * blockSize / duration / 1024.0);
 	}
 	if (flAborted)
 #ifdef USE_PTHREADS
@@ -253,6 +277,18 @@ makeBlocks(void *dummy)
 	return NULL;
 }
 
+static void *
+status(void *dummy)
+{
+	while (!flAborted && !flFinished) {
+		statusLine(blocksWritten * blockSize / 1024, numBlocks * blockSize / 1024,
+		    "KiB", "KiB/s");
+		usleep(STATUS_UPDATE_TIME);
+	}
+	fputc('\n', stderr);
+	return 0;
+}
+
 static void
 cleanup(int sig)
 {
@@ -263,13 +299,13 @@ static void
 usage()
 {
 	fprintf(stderr, "fblckgen version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2006/10/25 03:51:16 $\n");
+	    "Copyright Paul Ripke $Date: 2008/06/17 10:37:59 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else   
 	fprintf(stderr, "Built to use multiple processes.\n\n");
 #endif  
-	fprintf(stderr, "Usage: fblckgen [-a | -r] [-q] [-b bytes] "
+	fprintf(stderr, "Usage: fblckgen [-a | -r] [-q] [-v] [-b bytes] "
 	    "[-c count]\n\n");
 	fprintf(stderr, "  -a          Write blocks of a repeating ASCII "
 	    "string (compresses well)\n");
@@ -278,7 +314,8 @@ usage()
 	fprintf(stderr, "  -b bytes    Set write blocksize\n");
 	fprintf(stderr, "  -c count    Number of blocks to write "
 	    "(zero for infinite)\n");
-	fprintf(stderr, "  -q          Quiet operation\n\n");
+	fprintf(stderr, "  -q          Quiet operation\n");
+	fprintf(stderr, "  -v          Display progress line\n\n");
 	fprintf(stderr, "Compiled defaults:\n");
 	fprintf(stderr, "    fblckgen -a -b 1s -c 1k\n\n");
 	fprintf(stderr, "Numeric arguments take an optional "

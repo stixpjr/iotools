@@ -1,4 +1,4 @@
-/* $Id: common.c,v 1.1 2003/07/17 23:50:49 stix Exp stix $ */
+/* $Id: common.c,v 1.2 2006/07/26 12:13:41 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -34,7 +34,7 @@
 #include "iotools.h"
 #include "common.h"
 
-static char const rcsid[] = "$Id: common.c,v 1.1 2003/07/17 23:50:49 stix Exp stix $";
+static char const rcsid[] = "$Id: common.c,v 1.2 2006/07/26 12:13:41 stix Exp $";
 
 /*
  * getnum:
@@ -179,3 +179,53 @@ void
 }
 
 #endif /* !USE_SYSVSHM */
+
+#define	DECAY 0.90
+
+void
+statusLine(float var, float maxvar, const char *units, const char *rateunits)
+{
+	static const char spinner[] = "|/-\\";
+	static short spin = 0;
+	static struct timeval starttime;
+	static struct timeval lastdisplay;
+	static float lastrate = 0.0;
+	static int64_t lastvar = 0;
+	struct timeval now;
+	float rate;
+	float dur;
+
+	/* Initialisation */
+	if (lastvar == 0) {
+		gettimeofday(&starttime, NULL);
+		lastdisplay = starttime;
+		lastvar = var;
+		return;
+	}
+	gettimeofday(&now, NULL);
+	dur = now.tv_sec - lastdisplay.tv_sec +
+		(now.tv_usec - lastdisplay.tv_usec) / 1000000.0;
+	if (dur < (STATUS_UPDATE_TIME / 1000000.0)) {
+		return;
+	}
+	rate = (var - lastvar) / dur;
+	if (lastrate > 0.0)
+		rate = (1.0 - DECAY) * rate + DECAY * lastrate;
+	dur = now.tv_sec - starttime.tv_sec +
+		(now.tv_usec - starttime.tv_usec) / 1000000.0;
+	fprintf(stderr, "\r%c %5.1fs  %.1f %s  %7.0f %s decaying avg",
+		spinner[spin], dur, var, units, rate, rateunits);
+	if (maxvar > 0 && dur > 1 && rate > 0) {
+		fprintf(stderr, "  %3.1f%% done  ETR %5.1fs  ",
+			var / maxvar * 100.0,
+			(maxvar - var) / rate);
+	} else {
+		fputs("  ", stderr);
+	}
+	lastdisplay = now;
+	lastvar = var;
+	lastrate = rate;
+	spin++;
+	if (spin >= sizeof(spinner) - 1)
+		spin = 0;
+}
