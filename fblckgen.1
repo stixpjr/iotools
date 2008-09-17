@@ -1,4 +1,4 @@
-.\" $Id: fblckgen.1,v 1.2 2006/08/06 09:30:50 stix Exp $
+.\" $Id: fblckgen.1,v 1.3 2006/08/14 06:05:19 stix Exp $
 .\" 
 .\" 
 .\" Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -52,12 +52,12 @@ compress. Very handy for benchmarking tape drives, or just making a
 sized lump of data. By using double buffering and either pthreads
 or multiple processes, it can generally keep a tape drive busy.
 .PP
-Data is written directly to a copy of the STDOUT file descriptor. Shell
+Data is written directly to a copy of the standard output file descriptor. Shell
 redirection must be used to output to an alternate destination.
 .PP
 Before exiting, 
 .B fblckgen
-writes a single summary line to STDERR, containing statistics from the run.
+writes a single summary line to standard error, containing statistics from the run.
 .PP
 .SH OPTIONS
 .TP
@@ -71,7 +71,7 @@ default mode of operation.
 .BI \-b\  blocksize
 Writes blocks of size
 .I blocksize
-to STDOUT. If not specified, a blocksize of `1s', 512 bytes, is used.
+to standard output. If not specified, a blocksize of `1s', 512 bytes, is used.
 .TP
 .BI \-c\  count
 Writes
