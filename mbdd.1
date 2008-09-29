@@ -1,4 +1,4 @@
-.\" $Id: mbdd.1,v 1.7 2008/09/17 10:51:24 stix Exp $
+.\" $Id: mbdd.1,v 1.8 2008/09/29 00:42:56 stix Exp $
 .\" 
 .\" 
 .\" Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -39,6 +39,8 @@
 .B mbdd
 .RB [ \-b
 .IR buffersize ]
+.RB [ \-c
+.IR count ]
 .RB [ \-n
 .IR number ]
 .RB [ \-q ]
@@ -73,6 +75,13 @@ writes a summary to standard error, containing statistics from the run.
 Reads and writes are performed in chunks of
 .I buffersize
 bytes. If not specified, a buffersize of `64k', 65536 bytes, is used.
+.TP
+.BI \-c\  count
+At most,
+.I count
+blocks of size
+.I buffersize
+are read and written. If 0, the default, the process continues until EOF on read, or error.
 .TP
 .BI \-n\  number
 Specifies the
