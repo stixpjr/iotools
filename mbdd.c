@@ -1,4 +1,4 @@
-/* $Id: mbdd.c,v 1.6 2008/09/17 10:51:24 stix Exp $ */
+/* $Id: mbdd.c,v 1.7 2008/09/29 00:42:56 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id: mbdd.c,v 1.6 2008/09/17 10:51:24 stix Exp $";
+static char const rcsid[] = "$Id: mbdd.c,v 1.7 2008/09/29 00:42:56 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
@@ -49,7 +49,7 @@ static void	usage();
 
 /* Globals */
 static char **buf;
-static long bufSize, partialReads;
+static long bufSize, partialReads, maxBlocks;
 static int flAborted, flFinished, numBufs;
 static size_t remainder;
 static int destCount;
@@ -88,11 +88,15 @@ main(int argc, char **argv)
 	numBufs = 16;
 	flQuiet = 0;
 	destCount = 1;
+	maxBlocks = 0;
 
-	while ((c = getopt(argc, argv, "b:n:qsv")) != EOF) {
+	while ((c = getopt(argc, argv, "b:c:n:qsv")) != EOF) {
 		switch (c) {
 		case 'b':
 			bufSize = getnum(optarg);
+			break;
+		case 'c':
+			maxBlocks = getnum(optarg);
 			break;
 		case 'n':
 			numBufs = getnum(optarg);
@@ -113,6 +117,19 @@ main(int argc, char **argv)
 			exit(1);
 		}
 	}
+
+	if (maxBlocks < 0) {
+		fprintf(stderr, "Block count must be > 0\n");
+		exit(1);
+	}
+
+	/*
+	 * Add 2 to maxBlocks here so:
+	 * we can use '0' as a flag value elsewhere
+	 * the last block is a zero length remainder block
+	 */
+	if (maxBlocks > 0)
+		maxBlocks += 2;
 	if (numBufs < 2) {
 		fprintf(stderr, "Buffer count must be > 2\n");
 		exit(1);
@@ -314,14 +331,16 @@ reader(void *dummy)
 				}
 			}
 			if (numRead == 0) {
-				flFinished = 1;
 				remainder = totalRead;
+				flFinished = 1;
 				break;
 			}
 			if (numRead != bufSize)
 				partialReads++;
 			totalRead += numRead;
 		} while (!flAborted && totalRead != bufSize);
+		if (maxBlocks > 0)
+			maxBlocks--;
 		if (++bufNum >= numBufs)
 			bufNum = 0;
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
@@ -333,6 +352,8 @@ reader(void *dummy)
 		}
 		MYASSERT(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock");
+		if (maxBlocks == 1)
+			flFinished = 1;
 	}
 
 	/* tell the writers to give up if we've been aborted */
@@ -368,6 +389,8 @@ writer(void *destNum)
 			writeSize = remainder;
 		else
 			writeSize = bufSize;
+		if (writeSize == 0)
+			break;
 		numWrite = write(outfds[tid], buf[bufNum], writeSize);
 		if (numWrite != writeSize) {
 			if (numWrite != -1) {
@@ -423,17 +446,18 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2008/09/17 10:51:24 $\n");
+	    "Copyright Paul Ripke $Date: 2008/09/29 00:42:56 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
-	fprintf(stderr, "Usage: mbdd [-b bytes] [-n number] [-qs]\n\n");
+	fprintf(stderr, "Usage: mbdd [-b bytes] [-c count] [-n number] [-qs]\n\n");
 	fprintf(stderr, "  -b bytes    Set buffer size\n");
+	fprintf(stderr, "  -c count    Maximum number of blocks read\n");
 	fprintf(stderr, "  -n number   Number of buffers\n");
 	fprintf(stderr, "  -q          Quiet operation\n");
 	fprintf(stderr, "  -s          Suppress write to stdout\n");
 	fprintf(stderr, "  -v          Display progress line\n\n");
 	fprintf(stderr, "Compiled defaults:\n");
-	fprintf(stderr, "    mbdd -b 64k -n 16\n\n");
+	fprintf(stderr, "    mbdd -b 64k -c 0 -n 16\n\n");
 	fprintf(stderr, "Numeric arguments take an optional "
 	    "letter multiplier:\n");
 	fprintf(stderr, "  s:        Sectors (x 512)\n");
