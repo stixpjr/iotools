@@ -1,4 +1,4 @@
-  $Id: README,v 1.4 2006/08/15 06:55:50 stix Exp $
+  $Id: README,v 1.5 2006/08/16 05:56:22 stix Exp $
 
   iotools
 
@@ -39,9 +39,10 @@ iotools consists of three simple programs - from the man pages:
 
   mbdd:
        mbdd  is a threaded version of dd, without all the extras. It maintains
-       a number of buffers, a thread to read from STDIN to fill  the  buffers,
-       and  a  thread  to write to STDOUT, emptying the buffers. Several reads
-       may be done to fill a buffer entirely. A  partial  write  (not  a  full
+       a number of buffers, a thread to read from standard input to  fill  the
+       buffers, a thread to (optionally) write to standard output, and threads
+       for any additional destinations, emptying the  buffers.  Several  reads
+       may  be  done  to  fill  a buffer entirely. A partial write (not a full
        buffer length) will abort the copy.
 
        Its primary use is as a buffer between bursty,  non-threaded  programs.

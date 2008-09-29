@@ -1,4 +1,4 @@
-.\" $Id: mbdd.1,v 1.6 2008/09/17 10:07:45 stix Exp $
+.\" $Id: mbdd.1,v 1.7 2008/09/17 10:51:24 stix Exp $
 .\" 
 .\" 
 .\" Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -42,12 +42,14 @@
 .RB [ \-n
 .IR number ]
 .RB [ \-q ]
+.RB [ \-s ]
 .RB [ \-v ]
 .SH DESCRIPTION
 .B mbdd
 is a threaded version of dd, without all the extras. It maintains a number of
 buffers, a thread to read from standard input to fill the buffers, a thread to
-write to standard output, emptying the buffers. Several reads may be done to fill a
+(optionally) write to standard output, and threads for any additional destinations,
+emptying the buffers. Several reads may be done to fill a
 buffer entirely. A partial write (not a full buffer length) will abort the
 copy.
 .PP
@@ -79,6 +81,9 @@ of buffers to allocate and use in the circular queue. Defaults to 16.
 .TP
 .B \-q
 Quiet operation, suppresses the printing of the summary line.
+.TP
+.B \-s
+Suppress writing to standard output.
 .TP
 .B \-v
 Verbose: regularly prints a status line showing current progress.
