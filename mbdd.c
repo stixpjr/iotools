@@ -1,4 +1,4 @@
-/* $Id: mbdd.c,v 1.7 2008/09/29 00:42:56 stix Exp $ */
+/* $Id: mbdd.c,v 1.8 2008/09/29 00:47:53 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id: mbdd.c,v 1.7 2008/09/29 00:42:56 stix Exp $";
+static char const rcsid[] = "$Id: mbdd.c,v 1.8 2008/09/29 00:47:53 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
@@ -156,7 +156,7 @@ main(int argc, char **argv)
 		destNames[0] = "stdout";
 	}
 	while (*argv) {
-		outfds[destCount] = open(*argv, O_WRONLY|O_CREAT, DEFFILEMODE);
+		outfds[destCount] = open(*argv, O_WRONLY|O_CREAT, 0666);
 		if (outfds[destCount] < 0) {
 			fprintf(stderr, "Unable to open '%s' for write: %s\n", *argv,
 			    strerror(errno));
@@ -446,7 +446,7 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2008/09/29 00:42:56 $\n");
+	    "Copyright Paul Ripke $Date: 2008/09/29 00:47:53 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
 	fprintf(stderr, "Usage: mbdd [-b bytes] [-c count] [-n number] [-qs]\n\n");
