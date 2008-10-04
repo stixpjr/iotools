@@ -1,0 +1,23 @@
+$Id$
+
+/***********
+ * CHANGES *
+ ***********/
+
+2.1 released 2008-10-04
+- added the verbose status/progress bar to fblckgen(1), iohammer(1) and
+  mbdd(1).
+- added multiple destination support for mbdd(1). Think high-speed
+  tee(1).
+- added a block copy limit to mbdd(1).
+- fixed a bunch of bugs.
+
+2.0 released 2006-07-26
+- migrated to GNU autoconf.
+- added the mbdd(1) tool (pthread only).
+- added man pages.
+- tested on a variety of platforms.
+
+1.0 largely unreleased 2003-10-12
+- contained only fblckgen(1) and iohammer(1).
+- used fork(2) style multi-processing or pthreads.
