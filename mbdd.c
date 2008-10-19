@@ -1,4 +1,4 @@
-/* $Id: mbdd.c,v 1.8 2008/09/29 00:47:53 stix Exp $ */
+/* $Id: mbdd.c,v 1.9 2008/10/04 01:30:32 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id: mbdd.c,v 1.8 2008/09/29 00:47:53 stix Exp $";
+static char const rcsid[] = "$Id: mbdd.c,v 1.9 2008/10/04 01:30:32 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
@@ -49,7 +49,7 @@ static void	usage();
 
 /* Globals */
 static char **buf;
-static long bufSize, partialReads, maxBlocks;
+static long bufSize, partialReads, maxBlocks, numBlocks;
 static int flAborted, flFinished, numBufs;
 static size_t remainder;
 static int destCount;
@@ -119,17 +119,10 @@ main(int argc, char **argv)
 	}
 
 	if (maxBlocks < 0) {
-		fprintf(stderr, "Block count must be > 0\n");
+		fprintf(stderr, "Block count must be >= 0\n");
 		exit(1);
 	}
 
-	/*
-	 * Add 2 to maxBlocks here so:
-	 * we can use '0' as a flag value elsewhere
-	 * the last block is a zero length remainder block
-	 */
-	if (maxBlocks > 0)
-		maxBlocks += 2;
 	if (numBufs < 2) {
 		fprintf(stderr, "Buffer count must be > 2\n");
 		exit(1);
@@ -203,6 +196,7 @@ main(int argc, char **argv)
 	flAborted = 0;
 	flFinished = 0;
 	remainder = 0;
+	numBlocks = 0;
 	for (i = 0; i < destCount; i++) {
 		totalWritten[i] = 0;
 		bufSum[i] = 0;
@@ -339,10 +333,13 @@ reader(void *dummy)
 				partialReads++;
 			totalRead += numRead;
 		} while (!flAborted && totalRead != bufSize);
-		if (maxBlocks > 0)
-			maxBlocks--;
 		if (++bufNum >= numBufs)
 			bufNum = 0;
+		if (++numBlocks == maxBlocks) {
+			if (remainder == 0)
+				remainder = bufSize;
+			flFinished = 1;
+		}
 		MYASSERT(pthread_mutex_lock(&lock) == 0,
 		    "pthread_mutex_lock failed");
 		for (i = 0; i < destCount; i++) {
@@ -352,8 +349,6 @@ reader(void *dummy)
 		}
 		MYASSERT(pthread_mutex_unlock(&lock) == 0,
 		    "pthread_mutex_unlock");
-		if (maxBlocks == 1)
-			flFinished = 1;
 	}
 
 	/* tell the writers to give up if we've been aborted */
@@ -429,7 +424,8 @@ static void *
 status(void *dummy)
 {
 	while (!flAborted && !flFinished) {
-		statusLine(totalWritten[0] / 1024, 0, "KiB", "KiB/s");
+		statusLine(totalWritten[0] / 1024.0, maxBlocks / 1024.0 * bufSize,
+			   "KiB", "KiB/s");
 		usleep(STATUS_UPDATE_TIME);
 	}
 	fputc('\n', stderr);
@@ -446,7 +442,7 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2008/09/29 00:47:53 $\n");
+	    "Copyright Paul Ripke $Date: 2008/10/04 01:30:32 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
 	fprintf(stderr, "Usage: mbdd [-b bytes] [-c count] [-n number] [-qs]\n\n");

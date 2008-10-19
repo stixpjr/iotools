@@ -1,4 +1,4 @@
-/* $Id: common.c,v 1.2 2006/07/26 12:13:41 stix Exp $ */
+/* $Id: common.c,v 1.3 2008/09/17 10:51:24 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -34,7 +34,7 @@
 #include "iotools.h"
 #include "common.h"
 
-static char const rcsid[] = "$Id: common.c,v 1.2 2006/07/26 12:13:41 stix Exp $";
+static char const rcsid[] = "$Id: common.c,v 1.3 2008/09/17 10:51:24 stix Exp $";
 
 /*
  * getnum:
@@ -215,7 +215,7 @@ statusLine(float var, float maxvar, const char *units, const char *rateunits)
 		(now.tv_usec - starttime.tv_usec) / 1000000.0;
 	fprintf(stderr, "\r%c %5.1fs  %.1f %s  %7.0f %s decaying avg",
 		spinner[spin], dur, var, units, rate, rateunits);
-	if (maxvar > 0 && dur > 1 && rate > 0) {
+	if (maxvar > 1 && dur > 1 && rate > 0) {
 		fprintf(stderr, "  %3.1f%% done  ETR %5.1fs  ",
 			var / maxvar * 100.0,
 			(maxvar - var) / rate);
