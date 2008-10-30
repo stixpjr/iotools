@@ -1,4 +1,4 @@
-/* $Id: mbdd.c,v 1.9 2008/10/04 01:30:32 stix Exp $ */
+/* $Id: mbdd.c,v 1.10 2008/10/19 22:03:47 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id: mbdd.c,v 1.9 2008/10/04 01:30:32 stix Exp $";
+static char const rcsid[] = "$Id: mbdd.c,v 1.10 2008/10/19 22:03:47 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
@@ -124,7 +124,7 @@ main(int argc, char **argv)
 	}
 
 	if (numBufs < 2) {
-		fprintf(stderr, "Buffer count must be > 2\n");
+		fprintf(stderr, "Buffer count must be > 1\n");
 		exit(1);
 	}
 
@@ -442,7 +442,7 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2008/10/04 01:30:32 $\n");
+	    "Copyright Paul Ripke $Date: 2008/10/19 22:03:47 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
 	fprintf(stderr, "Usage: mbdd [-b bytes] [-c count] [-n number] [-qs]\n\n");
