@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.9 2006/07/26 12:43:09 stix Exp $ */
+/* $Id: iohammer.c,v 1.10 2008/09/17 10:51:24 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #include <sys/disklabel.h>
 #endif
 
-static char const rcsid[] = "$Id: iohammer.c,v 1.9 2006/07/26 12:43:09 stix Exp $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.10 2008/09/17 10:51:24 stix Exp $";
 
 /* Prototypes */
 static void	*doIO(void *);
@@ -526,7 +526,7 @@ static void
 usage()
 {
 	fprintf(stderr, "iohammer version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2006/07/26 12:43:09 $\n");
+	    "Copyright Paul Ripke $Date: 2008/09/17 10:51:24 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else
@@ -546,7 +546,7 @@ usage()
 	fprintf(stderr, "  -w write%%   Integer percentage of operations to be "
 	    "writes\n");
 	fprintf(stderr, "  -t threads  Number of threads to do I/O\n");
-	fprintf(stderr, "  -u          Unformatted output. Write tab-separted "
+	fprintf(stderr, "  -u          Unformatted output. Write tab-separated "
 	    "figures\n");
 	fprintf(stderr, "  -s size     Size of file/device to create/use\n");
 	fprintf(stderr, "              Specify '0' to attempt to find the "
