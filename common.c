@@ -1,4 +1,4 @@
-/* $Id: common.c,v 1.3 2008/09/17 10:51:24 stix Exp $ */
+/* $Id: common.c,v 1.4 2008/10/19 22:03:47 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -34,7 +34,7 @@
 #include "iotools.h"
 #include "common.h"
 
-static char const rcsid[] = "$Id: common.c,v 1.3 2008/09/17 10:51:24 stix Exp $";
+static char const rcsid[] = "$Id: common.c,v 1.4 2008/10/19 22:03:47 stix Exp $";
 
 /*
  * getnum:
@@ -180,7 +180,12 @@ void
 
 #endif /* !USE_SYSVSHM */
 
-#define	DECAY 0.90
+/*
+ * Update time is set to 0.5s, so we'll aim for an exponential half life of 5s.
+ * 5s = 10 updates, so:
+ * DECAY = e^(log(0.5)/10)
+ */
+#define	DECAY 0.93303299153680741598
 
 void
 statusLine(float var, float maxvar, const char *units, const char *rateunits)
