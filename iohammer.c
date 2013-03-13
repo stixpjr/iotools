@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.11 2013/02/21 11:07:44 stix Exp $ */
+/* $Id: iohammer.c,v 1.12 2013/03/13 03:58:35 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #include <sys/disklabel.h>
 #endif
 
-static char const rcsid[] = "$Id: iohammer.c,v 1.11 2013/02/21 11:07:44 stix Exp $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.12 2013/03/13 03:58:35 stix Exp $";
 
 /* Prototypes */
 static void	*doIO(void *);
@@ -178,7 +178,8 @@ main(int argc, char **argv)
 	    PTHREAD_CREATE_DETACHED) == 0,
 	    "pthread_attr_setdetachstate failed");
 	for (i = 0; i < threads; i++) {
-		MYASSERT(pthread_create(&tid[i], &attr, &doIO, (void *)i) == 0,
+		MYASSERT(pthread_create(&tid[i], &attr, &doIO,
+		    (void *)(intptr_t)i) == 0,
 		    "pthread_create failed");
 	}
 	MYASSERT(pthread_attr_destroy(&attr) == 0,
@@ -328,7 +329,7 @@ doIO(void *arg)
 	struct timeval tmout;
 	char *buf;
 
-	tid = (int)arg;
+	tid = (intptr_t)arg;
 	if ((buf = malloc(blockSize)) == NULL) {
 		fprintf(stderr, "malloc for %ld bytes failed.", blockSize);
 		exit(1);
@@ -526,7 +527,7 @@ static void
 usage()
 {
 	fprintf(stderr, "iohammer version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2013/02/21 11:07:44 $\n");
+	    "Copyright Paul Ripke $Date: 2013/03/13 03:58:35 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else

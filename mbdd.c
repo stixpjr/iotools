@@ -1,4 +1,4 @@
-/* $Id: mbdd.c,v 1.12 2013/02/21 11:09:24 stix Exp $ */
+/* $Id: mbdd.c,v 1.13 2013/03/13 03:58:35 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id: mbdd.c,v 1.12 2013/02/21 11:09:24 stix Exp $";
+static char const rcsid[] = "$Id: mbdd.c,v 1.13 2013/03/13 03:58:35 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
@@ -230,7 +230,7 @@ main(int argc, char **argv)
 
 	for (i = 0; i < destCount; i++) {
 		MYASSERT(pthread_create(&writer_tids[i], NULL, &writer,
-		    (void *)i) == 0,
+		    (void *)(intptr_t)i) == 0,
 			"pthread_create failed");
 	}
 
@@ -364,7 +364,7 @@ writer(void *destNum)
 {
 	ssize_t numWrite, writeSize;
 	int bufNum = 0;
-	int tid = (int) destNum;
+	int tid = (intptr_t) destNum;
 
 	while (!flAborted && !(flFinished && fullBufs[tid] == 0)) {
 		/* wait for block of data */
@@ -442,7 +442,7 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2013/02/21 11:09:24 $\n");
+	    "Copyright Paul Ripke $Date: 2013/03/13 03:58:35 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
 	fprintf(stderr, "Usage: mbdd [-b bytes] [-c count] [-n number] [-qs]\n\n");
