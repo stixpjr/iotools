@@ -1,4 +1,4 @@
-/* $Id: mbdd.c,v 1.11 2008/10/30 04:41:10 stix Exp $ */
+/* $Id: mbdd.c,v 1.12 2013/02/21 11:09:24 stix Exp $ */
 
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #error "pthreads required!"
 #endif
 
-static char const rcsid[] = "$Id: mbdd.c,v 1.11 2008/10/30 04:41:10 stix Exp $";
+static char const rcsid[] = "$Id: mbdd.c,v 1.12 2013/02/21 11:09:24 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);
@@ -67,7 +67,7 @@ int
 main(int argc, char **argv)
 {
 	int c, i, flQuiet, stdoutcopy;
-	float duration;
+	double duration;
 	struct timeval tpstart, tpend;
 	pthread_t reader_tid;
 	pthread_t *writer_tids;
@@ -258,13 +258,13 @@ main(int argc, char **argv)
 		}
 		
 		fprintf(stderr, "%" PRId64
-		    " bytes written to %d destinations in %.3f secs (%.3f KiB/sec)\n"
-		    "%ld partial read%s, %.3f average buffers full\n",
+		    " bytes written to %d destinations in %.3lf secs (%.3lf KiB/sec)\n"
+		    "%ld partial read%s, %.3lf average buffers full\n",
 		    totalWrittenSum, destCount, duration,
 		    duration > 0 ?
-		      (float)totalWrittenSum / duration / 1024.0 : 0.0,
+		      (double)totalWrittenSum / duration / 1024.0 : 0.0,
 		    partialReads, partialReads != 1 ? "s" : "",
-		    bufSamplesSum > 0 ? (float)bufSumSum / bufSamplesSum : 0.0);
+		    bufSamplesSum > 0 ? (double)bufSumSum / bufSamplesSum : 0.0);
 	}
 	if (flAborted)
 		pthread_cancel(reader_tid);
@@ -442,7 +442,7 @@ static void
 usage()
 {
 	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2008/10/30 04:41:10 $\n");
+	    "Copyright Paul Ripke $Date: 2013/02/21 11:09:24 $\n");
 	fprintf(stderr, "Multi-buffer dd\n\n");
 	fprintf(stderr, "Built to use pthreads.\n\n");
 	fprintf(stderr, "Usage: mbdd [-b bytes] [-c count] [-n number] [-qs]\n\n");

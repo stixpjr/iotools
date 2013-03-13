@@ -1,4 +1,4 @@
-/* $Id: common.c,v 1.4 2008/10/19 22:03:47 stix Exp $ */
+/* $Id: common.c,v 1.5 2013/02/21 12:17:08 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -31,10 +31,12 @@
  * possibility of such damage.
  */
 
+#include <math.h>
+
 #include "iotools.h"
 #include "common.h"
 
-static char const rcsid[] = "$Id: common.c,v 1.4 2008/10/19 22:03:47 stix Exp $";
+static char const rcsid[] = "$Id: common.c,v 1.5 2013/02/21 12:17:08 stix Exp $";
 
 /*
  * getnum:
@@ -182,23 +184,22 @@ void
 
 /*
  * Update time is set to 0.5s, so we'll aim for an exponential half life of 5s.
- * 5s = 10 updates, so:
- * DECAY = e^(log(0.5)/10)
  */
-#define	DECAY 0.93303299153680741598
+#define HALFLIFE 5.0
 
 void
-statusLine(float var, float maxvar, const char *units, const char *rateunits)
+statusLine(double var, double maxvar, const char *units, const char *rateunits)
 {
 	static const char spinner[] = "|/-\\";
 	static short spin = 0;
 	static struct timeval starttime;
 	static struct timeval lastdisplay;
-	static float lastrate = 0.0;
+	static double lastrate = 0.0;
 	static int64_t lastvar = 0;
 	struct timeval now;
-	float rate;
-	float dur;
+	double rate;
+	double dur;
+	double decay;
 
 	/* Initialisation */
 	if (lastvar == 0) {
@@ -210,26 +211,26 @@ statusLine(float var, float maxvar, const char *units, const char *rateunits)
 	gettimeofday(&now, NULL);
 	dur = now.tv_sec - lastdisplay.tv_sec +
 		(now.tv_usec - lastdisplay.tv_usec) / 1000000.0;
-	if (dur < (STATUS_UPDATE_TIME / 1000000.0)) {
+	if (dur <= 0) {
 		return;
 	}
 	rate = (var - lastvar) / dur;
-	if (lastrate > 0.0)
-		rate = (1.0 - DECAY) * rate + DECAY * lastrate;
+	decay = pow(0.5, dur / HALFLIFE);
+	rate = (1.0 - decay) * rate + decay * lastrate;
+	lastdisplay = now;
+	lastvar = var;
+	lastrate = rate;
 	dur = now.tv_sec - starttime.tv_sec +
 		(now.tv_usec - starttime.tv_usec) / 1000000.0;
-	fprintf(stderr, "\r%c %5.1fs  %.1f %s  %7.0f %s decaying avg",
+	fprintf(stderr, "\r%c %5.1lfs  %.1lf %s  %7.0lf %s decaying avg",
 		spinner[spin], dur, var, units, rate, rateunits);
 	if (maxvar > 1 && dur > 1 && rate > 0) {
-		fprintf(stderr, "  %3.1f%% done  ETR %5.1fs  ",
+		fprintf(stderr, "  %3.1lf%% done  ETR %5.1lfs  ",
 			var / maxvar * 100.0,
 			(maxvar - var) / rate);
 	} else {
 		fputs("  ", stderr);
 	}
-	lastdisplay = now;
-	lastvar = var;
-	lastrate = rate;
 	spin++;
 	if (spin >= sizeof(spinner) - 1)
 		spin = 0;

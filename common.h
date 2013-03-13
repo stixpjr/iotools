@@ -1,4 +1,4 @@
-/* $Id: common.h,v 1.4 2006/07/26 12:12:38 stix Exp $ */
+/* $Id: common.h,v 1.5 2008/09/17 10:51:24 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -75,6 +75,6 @@ unsigned long __seed;
 int64_t	getnum(char *);
 void	initblock(char *, long, dataType, int64_t);
 void	*getshm(long size);
-void	statusLine(float, float, const char *, const char *);
+void	statusLine(double, double, const char *, const char *);
 
 #endif /* !COMMON_H */

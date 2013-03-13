@@ -1,4 +1,4 @@
-/* $Id: iohammer.c,v 1.10 2008/09/17 10:51:24 stix Exp $ */
+/* $Id: iohammer.c,v 1.11 2013/02/21 11:07:44 stix Exp $ */
 
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
@@ -38,7 +38,7 @@
 #include <sys/disklabel.h>
 #endif
 
-static char const rcsid[] = "$Id: iohammer.c,v 1.10 2008/09/17 10:51:24 stix Exp $";
+static char const rcsid[] = "$Id: iohammer.c,v 1.11 2013/02/21 11:07:44 stix Exp $";
 
 /* Prototypes */
 static void	*doIO(void *);
@@ -68,7 +68,7 @@ main(int argc, char **argv)
 	int c, i, unformatted, writePct;
 	int flVerbose;
 	int64_t fileSize;
-	float secs;
+	double secs;
 	struct timeval startTime, endTime;
 	char fileName[PATH_MAX];
 #ifdef USE_PTHREADS
@@ -296,14 +296,14 @@ main(int argc, char **argv)
 	if (flAborted)
 		fprintf(stderr, "I/O aborted.\n");
 	if (unformatted) {
-		printf("%"PRId64"\t%d\t%ld\t%d\t%"PRId64"\t%"PRId64"\t%f\t%f\n",
+		printf("%"PRId64"\t%d\t%ld\t%d\t%"PRId64"\t%"PRId64"\t%lf\t%lf\n",
 		    fileSize,
 		    threads, blockSize, writePct, numio, numWrites, secs,
 		    numio / secs);
 	} else {
-		printf("%.3f secs, %"PRId64" IOs, %"PRId64" writes\n",
+		printf("%.3lf secs, %"PRId64" IOs, %"PRId64" writes\n",
 		    secs, numio, numWrites);
-		printf("%.1f IOs/sec, %.2f ms average seek\n", numio / secs,
+		printf("%.1lf IOs/sec, %.2lf ms average seek\n", numio / secs,
 		    secs / numio * 1000.0);
 	}
 
@@ -526,7 +526,7 @@ static void
 usage()
 {
 	fprintf(stderr, "iohammer version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2008/09/17 10:51:24 $\n");
+	    "Copyright Paul Ripke $Date: 2013/02/21 11:07:44 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else
