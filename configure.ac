@@ -1,10 +1,10 @@
-dnl $Id: configure.ac,v 1.5 2008/10/20 05:15:24 stix Exp $
+dnl $Id: configure.ac,v 1.6 2013/03/13 03:58:35 stix Exp $
 dnl
 dnl configure.in:
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(iotools, 2.1, stix@stix.id.au)
-AC_REVISION($Revision: 1.5 $)dnl
+AC_INIT(iotools, 2.1, stixpjr@gmail.com)
+AC_REVISION($Revision: 1.6 $)dnl
 
 AC_CONFIG_HEADER(config.h)
 AC_CONFIG_AUX_DIR(config)
