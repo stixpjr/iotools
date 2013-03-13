@@ -1,4 +1,4 @@
-/* $Id: fblckgen.c,v 1.10 2008/06/17 10:37:59 stix Exp $ */
+/* $Id: fblckgen.c,v 1.11 2008/09/17 10:51:24 stix Exp $ */
 
 /*
  * Copyright (c) 2004 Paul Ripke. All rights reserved.
@@ -34,7 +34,7 @@
 #include "iotools.h"
 #include "common.h"
 
-static char const rcsid[] = "$Id: fblckgen.c,v 1.10 2008/06/17 10:37:59 stix Exp $";
+static char const rcsid[] = "$Id: fblckgen.c,v 1.11 2008/09/17 10:51:24 stix Exp $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);
@@ -68,7 +68,7 @@ main(int argc, char **argv)
 	int flQuiet;
 	int flVerbose;
 	int64_t numWritten;
-	float duration;
+	double duration;
 	void *buffer;
 	struct timeval tpstart, tpend;
 #ifdef USE_PTHREADS
@@ -227,9 +227,9 @@ main(int argc, char **argv)
 		duration = tpend.tv_sec - tpstart.tv_sec +
 		    (tpend.tv_usec - tpstart.tv_usec) / 1000000.0;
 		fprintf(stderr, "%" PRId64
-		    " bytes written in %.3f secs (%.3f KiB/sec)\n",
+		    " bytes written in %.3lf secs (%.3lf KiB/sec)\n",
 		    (int64_t)blocksWritten * blockSize,
-		    duration, (float)blocksWritten * blockSize / duration / 1024.0);
+		    duration, (double)blocksWritten * blockSize / duration / 1024.0);
 	}
 	if (flAborted)
 #ifdef USE_PTHREADS
@@ -299,7 +299,7 @@ static void
 usage()
 {
 	fprintf(stderr, "fblckgen version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2008/06/17 10:37:59 $\n");
+	    "Copyright Paul Ripke $Date: 2008/09/17 10:51:24 $\n");
 #ifdef USE_PTHREADS
 	fprintf(stderr, "Built to use pthreads.\n\n");
 #else   

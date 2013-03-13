@@ -1,10 +1,10 @@
-dnl $Id: configure.ac,v 1.4 2006/08/14 09:27:47 stix Exp $
+dnl $Id: configure.ac,v 1.5 2008/10/20 05:15:24 stix Exp $
 dnl
 dnl configure.in:
 dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT(iotools, 2.1, stix@stix.id.au)
-AC_REVISION($Revision: 1.4 $)dnl
+AC_REVISION($Revision: 1.5 $)dnl
 
 AC_CONFIG_HEADER(config.h)
 AC_CONFIG_AUX_DIR(config)
@@ -74,6 +74,8 @@ else
 	AC_FUNC_SELECT_ARGTYPES
 fi
 
+AC_CHECK_LIB(m, pow)
+
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_TIME
@@ -88,12 +90,12 @@ AC_CHECK_SIZEOF(off_t, 0)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
-AC_C_VOLATILE
+dnl AC_C_VOLATILE
 AC_C_INLINE
 AC_TYPE_SIGNAL
 AC_CHECK_TYPES([long long, unsigned long long, int64_t])
 
-# Checks for library functions.
+dnl Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_FORK
 AC_FUNC_FSEEKO
@@ -104,7 +106,7 @@ AC_CHECK_FUNCS(bzero memset, break)
 AC_CHECK_FUNCS(bcopy memcpy, break)
 AC_CHECK_FUNCS([gettimeofday select strerror])
 
-# Check for some variables
+dnl Check for some variables
 AC_MSG_CHECKING([for optarg declaration])
 AC_TRY_LINK([
 #include <stdlib.h>
