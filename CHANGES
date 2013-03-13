@@ -1,8 +1,12 @@
-$Id: CHANGES,v 1.1 2008/10/04 09:59:04 stix Exp $
+$Id: CHANGES,v 1.2 2008/10/20 05:15:24 stix Exp $
 
 /***********
  * CHANGES *
  ***********/
+
+2.2 released 2013-03-13
+- minor fixes, silenced compiler warnings, cleaned up decaying average code.
+- changed email address.
 
 2.1 released 2008-10-20
 - added the verbose status/progress bar to fblckgen(1), iohammer(1) and
