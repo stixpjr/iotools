@@ -13,9 +13,6 @@
 # PARTICULAR PURPOSE.
 
 @SET_MAKE@
-
-#	$Id: Makefile.in,v 1.2 2006/07/26 12:11:14 stix Exp $
-#
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
     false; \

@@ -1,6 +1,5 @@
-dnl $Id: configure.ac,v 1.7 2013/03/13 04:07:56 stix Exp $
 dnl
-dnl configure.in:
+dnl configure.ac:
 dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT([iotools],[2.2],[stixpjr@gmail.com])

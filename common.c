@@ -1,5 +1,3 @@
-/* $Id: common.c,v 1.5 2013/02/21 12:17:08 stix Exp $ */
-
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
  *
@@ -35,8 +33,6 @@
 
 #include "iotools.h"
 #include "common.h"
-
-static char const rcsid[] = "$Id: common.c,v 1.5 2013/02/21 12:17:08 stix Exp $";
 
 unsigned long __seed;
 

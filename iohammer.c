@@ -1,5 +1,3 @@
-/* $Id: iohammer.c,v 1.12 2013/03/13 03:58:35 stix Exp $ */
-
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
  *
@@ -37,8 +35,6 @@
 #ifdef BSD4_4
 #include <sys/disklabel.h>
 #endif
-
-static char const rcsid[] = "$Id: iohammer.c,v 1.12 2013/03/13 03:58:35 stix Exp $";
 
 /* Prototypes */
 static void	*doIO(void *);

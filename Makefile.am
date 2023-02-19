@@ -1,6 +1,3 @@
-#	$Id: Makefile.in,v 1.2 2006/07/26 12:11:14 stix Exp $
-#
-
 AUTOMAKE_OPTIONS = foreign
 
 srcdir	= @srcdir@

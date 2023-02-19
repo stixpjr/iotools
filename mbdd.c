@@ -1,5 +1,3 @@
-/* $Id: mbdd.c,v 1.13 2013/03/13 03:58:35 stix Exp $ */
-
 /*
  * Copyright (c) 2006 Paul Ripke. All rights reserved.
  *
@@ -37,8 +35,6 @@
 #ifndef USE_PTHREADS
 #error "pthreads required!"
 #endif
-
-static char const rcsid[] = "$Id: mbdd.c,v 1.13 2013/03/13 03:58:35 stix Exp $";
 
 /* Prototypes */
 static void	*reader(void *);

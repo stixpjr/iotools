@@ -1,5 +1,3 @@
-/* $Id: fblckgen.c,v 1.11 2008/09/17 10:51:24 stix Exp $ */
-
 /*
  * Copyright (c) 2004 Paul Ripke. All rights reserved.
  *
@@ -33,8 +31,6 @@
 
 #include "iotools.h"
 #include "common.h"
-
-static char const rcsid[] = "$Id: fblckgen.c,v 1.11 2008/09/17 10:51:24 stix Exp $";
 
 /* Prototypes */
 static void	*makeBlocks(void *);

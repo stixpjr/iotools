@@ -1,5 +1,3 @@
-/* $Id: common.h,v 1.5 2008/09/17 10:51:24 stix Exp $ */
-
 /*
  * Copyright (c) 2003 Paul Ripke. All rights reserved.
  *
