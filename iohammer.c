@@ -522,48 +522,50 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "iohammer version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2013/03/13 03:58:35 $\n");
+	fprintf(stderr,
+		"iohammer version " PACKAGE_VERSION ".\n"
+		    "Copyright Paul Ripke $Date: 2013/03/13 03:58:35 $\n"
 #ifdef USE_PTHREADS
-	fprintf(stderr, "Built to use pthreads.\n\n");
+		"Built to use pthreads.\n\n"
 #else
-	fprintf(stderr, "Built to use multiple processes.\n\n");
+		"Built to use multiple processes.\n\n"
 #endif
-	fprintf(stderr, "Usage: iohammer [-a | -r] [-iu] [-b size] "
-	    "[-c count] [-w write%%]\n");
-	fprintf(stderr, "                [-t threads] [-s size] "
-	    "[-f file/dir/dev]\n\n");
-	fprintf(stderr, "  -a          Write blocks of a repeating ASCII "
-	    "string\n");
-	fprintf(stderr, "  -r          Write blocks of binary 'random' data\n");
-	fprintf(stderr, "  -i          Ignore I/O errors and continue\n");
-	fprintf(stderr, "  -b bytes    Set write blocksize\n");
-	fprintf(stderr, "  -c count    Number of blocks to read/write "
-	    "(zero for infinite)\n");
-	fprintf(stderr, "  -w write%%   Integer percentage of operations to be "
-	    "writes\n");
-	fprintf(stderr, "  -t threads  Number of threads to do I/O\n");
-	fprintf(stderr, "  -u          Unformatted output. Write tab-separated "
-	    "figures\n");
-	fprintf(stderr, "  -s size     Size of file/device to create/use\n");
-	fprintf(stderr, "              Specify '0' to attempt to find the "
-	    "size of file/device\n");
-	fprintf(stderr, "  -f file     Name of file (must exist), directory "
-	    "or device\n");
-	fprintf(stderr, "              If directory, a temporary file is "
-	    "created\n\n");
-	fprintf(stderr, "Unformatted output, order is:\n");
-	fprintf(stderr, "  size, threads, blocksize, write-pct, count, "
-	    "writes, seconds, rate\n\n");
-	fprintf(stderr, "Compiled defaults:\n");
-	fprintf(stderr, "    iohammer -a -b 1s -c 0 -t 8 -w 0 -s 1m -f .\n\n");
-	fprintf(stderr, "  Numeric arguments take an optional "
-	    "letter multiplier:\n");
-	fprintf(stderr, "    s:        Sectors (x 512)\n");
-	fprintf(stderr, "    k:        kibi (x 1024 or 2^10)\n");
-	fprintf(stderr, "    m:        mebi (x 1048576 or 2^20)\n");
-	fprintf(stderr, "    g:        gibi (x 2^30)\n");
-	fprintf(stderr, "    t:        tebi (x 2^40)\n");
-	fprintf(stderr, "    p:        pebi (x 2^50)\n");
-	fprintf(stderr, "    e:        exbi (x 2^60)\n");
+		"Usage: iohammer [-a | -r] [-iu] [-b size] "
+		    "[-c count] [-w write%%]\n"
+		"                [-t threads] [-s size] "
+		    "[-f file/dir/dev]\n\n"
+		"  -a          Write blocks of a repeating ASCII "
+		    "string\n"
+		"  -r          Write blocks of binary 'random' data\n"
+		"  -i          Ignore I/O errors and continue\n"
+		"  -b bytes    Set write blocksize\n"
+		"  -c count    Number of blocks to read/write "
+		    "(zero for infinite)\n"
+		"  -w write%%   Integer percentage of operations to be "
+		    "writes\n"
+		"  -t threads  Number of threads to do I/O\n"
+		"  -u          Unformatted output. Write tab-separated "
+		    "figures\n"
+		"  -s size     Size of file/device to create/use\n"
+		"              Specify '0' to attempt to find the "
+		    "size of file/device\n"
+		"  -f file     Name of file (must exist), directory "
+		    "or device\n"
+		"              If directory, a temporary file is "
+		    "created\n\n"
+		"Unformatted output, order is:\n"
+		"  size, threads, blocksize, write-pct, count, "
+		    "writes, seconds, rate\n\n"
+		"Compiled defaults:\n"
+		"    iohammer -a -b 1s -c 0 -t 8 -w 0 -s 1m -f .\n\n"
+		"  Numeric arguments take an optional "
+		    "letter multiplier:\n"
+		"    s:        Sectors (x 512)\n"
+		"    k:        kibi (x 1024 or 2^10)\n"
+		"    m:        mebi (x 1048576 or 2^20)\n"
+		"    g:        gibi (x 2^30)\n"
+		"    t:        tebi (x 2^40)\n"
+		"    p:        pebi (x 2^50)\n"
+		"    e:        exbi (x 2^60)\n"
+	);
 }

@@ -294,33 +294,34 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "fblckgen version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2008/09/17 10:51:24 $\n");
+	fprintf(stderr,
+		"fblckgen version " PACKAGE_VERSION ".\n"
+		"Copyright Paul Ripke $Date: 2008/09/17 10:51:24 $\n"
 #ifdef USE_PTHREADS
-	fprintf(stderr, "Built to use pthreads.\n\n");
+		"Built to use pthreads.\n\n"
 #else   
-	fprintf(stderr, "Built to use multiple processes.\n\n");
+		"Built to use multiple processes.\n\n"
 #endif  
-	fprintf(stderr, "Usage: fblckgen [-a | -r] [-q] [-v] [-b bytes] "
-	    "[-c count]\n\n");
-	fprintf(stderr, "  -a          Write blocks of a repeating ASCII "
-	    "string (compresses well)\n");
-	fprintf(stderr, "  -r          Write blocks of binary 'random' data "
-	    "(shouldn't compress)\n");
-	fprintf(stderr, "  -b bytes    Set write blocksize\n");
-	fprintf(stderr, "  -c count    Number of blocks to write "
-	    "(zero for infinite)\n");
-	fprintf(stderr, "  -q          Quiet operation\n");
-	fprintf(stderr, "  -v          Display progress line\n\n");
-	fprintf(stderr, "Compiled defaults:\n");
-	fprintf(stderr, "    fblckgen -a -b 1s -c 1k\n\n");
-	fprintf(stderr, "Numeric arguments take an optional "
-	    "letter multiplier:\n");
-	fprintf(stderr, "  s:        Sectors (x 512)\n");
-	fprintf(stderr, "  k:        kibi (x 1024 or 2^10)\n");
-	fprintf(stderr, "  m:        mebi (x 1048576 or 2^20)\n");
-	fprintf(stderr, "  g:        gibi (x 2^30)\n");
-	fprintf(stderr, "  t:        tebi (x 2^40)\n");
-	fprintf(stderr, "  p:        pebi (x 2^50)\n");
-	fprintf(stderr, "  e:        exbi (x 2^60)\n");
+		"Usage: fblckgen [-a | -r] [-q] [-v] [-b bytes] [-c count]\n\n"
+		"  -a          Write blocks of a repeating ASCII "
+		    "string (compresses well)\n"
+		"  -r          Write blocks of binary 'random' data "
+		    "(shouldn't compress)\n"
+		"  -b bytes    Set write blocksize\n"
+		"  -c count    Number of blocks to write "
+		    "(zero for infinite)\n"
+		"  -q          Quiet operation\n"
+		"  -v          Display progress line\n\n"
+		"Compiled defaults:\n"
+		"    fblckgen -a -b 1s -c 1k\n\n"
+		"Numeric arguments take an optional "
+		    "letter multiplier:\n"
+		"  s:        Sectors (x 512)\n"
+		"  k:        kibi (x 1024 or 2^10)\n"
+		"  m:        mebi (x 1048576 or 2^20)\n"
+		"  g:        gibi (x 2^30)\n"
+		"  t:        tebi (x 2^40)\n"
+		"  p:        pebi (x 2^50)\n"
+		"  e:        exbi (x 2^60)\n"
+	);
 }

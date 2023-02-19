@@ -437,26 +437,28 @@ cleanup(int sig)
 static void
 usage()
 {
-	fprintf(stderr, "mbdd version " PACKAGE_VERSION ".\n"
-	    "Copyright Paul Ripke $Date: 2013/03/13 03:58:35 $\n");
-	fprintf(stderr, "Multi-buffer dd\n\n");
-	fprintf(stderr, "Built to use pthreads.\n\n");
-	fprintf(stderr, "Usage: mbdd [-b bytes] [-c count] [-n number] [-qs]\n\n");
-	fprintf(stderr, "  -b bytes    Set buffer size\n");
-	fprintf(stderr, "  -c count    Maximum number of blocks read\n");
-	fprintf(stderr, "  -n number   Number of buffers\n");
-	fprintf(stderr, "  -q          Quiet operation\n");
-	fprintf(stderr, "  -s          Suppress write to stdout\n");
-	fprintf(stderr, "  -v          Display progress line\n\n");
-	fprintf(stderr, "Compiled defaults:\n");
-	fprintf(stderr, "    mbdd -b 64k -c 0 -n 16\n\n");
-	fprintf(stderr, "Numeric arguments take an optional "
-	    "letter multiplier:\n");
-	fprintf(stderr, "  s:        Sectors (x 512)\n");
-	fprintf(stderr, "  k:        kibi (x 1024 or 2^10)\n");
-	fprintf(stderr, "  m:        mebi (x 1048576 or 2^20)\n");
-	fprintf(stderr, "  g:        gibi (x 2^30)\n");
-	fprintf(stderr, "  t:        tebi (x 2^40)\n");
-	fprintf(stderr, "  p:        pebi (x 2^50)\n");
-	fprintf(stderr, "  e:        exbi (x 2^60)\n");
+	fprintf(stderr,
+		"mbdd version " PACKAGE_VERSION ".\n"
+		    "Copyright Paul Ripke $Date: 2013/03/13 03:58:35 $\n"
+		"Multi-buffer dd\n\n"
+		"Built to use pthreads.\n\n"
+		"Usage: mbdd [-b bytes] [-c count] [-n number] [-qs]\n\n"
+		"  -b bytes    Set buffer size\n"
+		"  -c count    Maximum number of blocks read\n"
+		"  -n number   Number of buffers\n"
+		"  -q          Quiet operation\n"
+		"  -s          Suppress write to stdout\n"
+		"  -v          Display progress line\n\n"
+		"Compiled defaults:\n"
+		"    mbdd -b 64k -c 0 -n 16\n\n"
+		"Numeric arguments take an optional "
+		    "letter multiplier:\n"
+		"  s:        Sectors (x 512)\n"
+		"  k:        kibi (x 1024 or 2^10)\n"
+		"  m:        mebi (x 1048576 or 2^20)\n"
+		"  g:        gibi (x 2^30)\n"
+		"  t:        tebi (x 2^40)\n"
+		"  p:        pebi (x 2^50)\n"
+		"  e:        exbi (x 2^60)\n"
+	);
 }
