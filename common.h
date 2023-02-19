@@ -69,7 +69,7 @@ typedef enum { ALPHADATA, RANDDATA } dataType;
  */
 #define	SRAND(x) { __seed = x; }
 #define	RAND() (__seed = __seed * 1103515245L + 12345L)
-unsigned long __seed;
+extern unsigned long __seed;
 
 /* Prototypes */
 int64_t	getnum(char *);

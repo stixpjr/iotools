@@ -38,6 +38,8 @@
 
 static char const rcsid[] = "$Id: common.c,v 1.5 2013/02/21 12:17:08 stix Exp $";
 
+unsigned long __seed;
+
 /*
  * getnum:
  * Read an quad-int (int64_t) with optional letter multiplier.
