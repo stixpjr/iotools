@@ -1,46 +1,30 @@
 #!/bin/sh
 #
+# $NetBSD: install-sh.in,v 1.6 2012/01/11 13:07:31 hans Exp $
+# This script now also installs multiple files, but might choke on installing
+# multiple files with spaces in the file names.
+#
 # install - install a program, script, or datafile
+# This comes from X11R5 (mit/util/scripts/install.sh).
 #
-# This originates from X11R5 (mit/util/scripts/install.sh), which was
-# later released in X11R6 (xc/config/util/install.sh) with the
-# following copyright and license.
+# Copyright 1991 by the Massachusetts Institute of Technology
 #
-# Copyright (C) 1994 X Consortium
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-# X CONSORTIUM BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
-# AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNEC-
-# TION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#
-# Except as contained in this notice, the name of the X Consortium shall not
-# be used in advertising or otherwise to promote the sale, use or other deal-
-# ings in this Software without prior written authorization from the X Consor-
-# tium.
-#
-#
-# FSF changes to this file are in the public domain.
+# Permission to use, copy, modify, distribute, and sell this software and its
+# documentation for any purpose is hereby granted without fee, provided that
+# the above copyright notice appear in all copies and that both that
+# copyright notice and this permission notice appear in supporting
+# documentation, and that the name of M.I.T. not be used in advertising or
+# publicity pertaining to distribution of the software without specific,
+# written prior permission.  M.I.T. makes no representations about the
+# suitability of this software for any purpose.  It is provided "as is"
+# without express or implied warranty.
 #
 # Calling this script install-sh is preferred over install.sh, to prevent
 # `make' implicit rules from creating a file called install from it
 # when there is no Makefile.
 #
 # This script is compatible with the BSD install script, but was written
-# from scratch.  It can only install one file at a time, a restriction
-# shared with many OS's install programs.
-
+# from scratch.
 
 # set DOITPROG to echo to test this script
 
@@ -50,6 +34,7 @@ doit="${DOITPROG-}"
 
 # put in absolute paths if you don't have them in your path; or use env. vars.
 
+awkprog="${AWKPROG-awk}"
 mvprog="${MVPROG-mv}"
 cpprog="${CPPROG-cp}"
 chmodprog="${CHMODPROG-chmod}"
@@ -59,22 +44,35 @@ stripprog="${STRIPPROG-strip}"
 rmprog="${RMPROG-rm}"
 mkdirprog="${MKDIRPROG-mkdir}"
 
-transformbasename=""
-transform_arg=""
-instcmd="$mvprog"
-chmodcmd="$chmodprog 0755"
+instcmd="$cpprog"
+instflags=""
+pathcompchmodcmd="$chmodprog 755"
+chmodcmd="$chmodprog 755"
 chowncmd=""
 chgrpcmd=""
 stripcmd=""
+stripflags=""
 rmcmd="$rmprog -f"
 mvcmd="$mvprog"
 src=""
+msrc=""
 dst=""
 dir_arg=""
+suffix=""
+suffixfmt=""
 
 while [ x"$1" != x ]; do
     case $1 in
-	-c) instcmd=$cpprog
+	-b) suffix=".old"
+	    shift
+	    continue;;
+
+	-B) suffixfmt="$2"
+	    shift
+	    shift
+	    continue;;
+
+	-c) instcmd="$cpprog"
 	    shift
 	    continue;;
 
@@ -84,6 +82,11 @@ while [ x"$1" != x ]; do
 
 	-m) chmodcmd="$chmodprog $2"
 	    shift
+	    shift
+	    continue;;
+
+	-m*)
+	    chmodcmd="$chmodprog ${1#-m}"
 	    shift
 	    continue;;
 
@@ -97,159 +100,178 @@ while [ x"$1" != x ]; do
 	    shift
 	    continue;;
 
-	-s) stripcmd=$stripprog
+	-s) stripcmd="$stripprog"
 	    shift
 	    continue;;
 
-	-t=*) transformarg=`echo $1 | sed 's/-t=//'`
+	-S) stripcmd="$stripprog"
+	    stripflags="-S $2 $stripflags"
+	    shift
 	    shift
 	    continue;;
 
-	-b=*) transformbasename=`echo $1 | sed 's/-b=//'`
+	-p) instflags="-p"
 	    shift
 	    continue;;
 
-	*)  if [ x"$src" = x ]
+	*)  if [ x"$msrc" = x ]
 	    then
-		src=$1
+		msrc="$dst"
 	    else
-		# this colon is to work around a 386BSD /bin/sh bug
-		:
-		dst=$1
+		msrc="$msrc $dst"
 	    fi
+	    src="$dst"
+	    dst="$1"
 	    shift
 	    continue;;
     esac
 done
 
-if [ x"$src" = x ]
+if [ x"$dir_arg" = x ]
 then
-	echo "$0: no input file specified" >&2
-	exit 1
+	dstisfile=""
+	if [ ! -d "$dst" ]
+	then
+		if [ x"$msrc" = x"$src" ]
+		then
+			dstisfile=true
+		else
+			echo "install: destination is not a directory"
+			exit 1
+		fi
+	fi
 else
-	:
+	msrc="$msrc $dst"
 fi
 
+if [ x"$msrc" = x ]
+then
+	echo "install: no destination specified"
+	exit 1
+fi      
+
+for srcarg in $msrc; do
+
 if [ x"$dir_arg" != x ]; then
-	dst=$src
-	src=""
 
-	if [ -d "$dst" ]; then
-		instcmd=:
-		chmodcmd=""
-	else
-		instcmd=$mkdirprog
-	fi
+	dstarg="$srcarg"
 else
+	dstarg="$dst"
 
-# Waiting for this to be detected by the "$instcmd $src $dsttmp" command
-# might cause directories to be created, which would be especially bad
+# Waiting for this to be detected by the "$instcmd $srcarg $dsttmp" command
+# might cause directories to be created, which would be especially bad 
 # if $src (and thus $dsttmp) contains '*'.
 
-	if [ -f "$src" ] || [ -d "$src" ]
+	if [ -f "$srcarg" ]
 	then
-		:
+		doinst="$instcmd $instflags"
+	elif [ -d "$srcarg" ]
+	then
+		echo "install: $srcarg: not a regular file"
+		exit 1
+	elif [ "$srcarg" = "/dev/null" ]
+	then
+		doinst="$cpprog"
 	else
-		echo "$0: $src does not exist" >&2
+		echo "install:  $srcarg does not exist"
 		exit 1
 	fi
-
-	if [ x"$dst" = x ]
-	then
-		echo "$0: no destination specified" >&2
-		exit 1
-	else
-		:
-	fi
-
+	
 # If destination is a directory, append the input filename; if your system
 # does not like double slashes in filenames, you may need to add some logic
 
-	if [ -d "$dst" ]
+	if [ -d "$dstarg" ]
 	then
-		dst=$dst/`basename "$src"`
-	else
-		:
+		dstarg="$dstarg"/`basename "$srcarg"`
 	fi
 fi
 
 ## this sed command emulates the dirname command
-dstdir=`echo "$dst" | sed -e 's,[^/]*$,,;s,/$,,;s,^$,.,'`
+dstdir=`echo "$dstarg" | sed -e 's,[^/]*$,,;s,/$,,;s,^$,.,'`
 
 # Make sure that the destination directory exists.
 #  this part is taken from Noah Friedman's mkinstalldirs script
 
 # Skip lots of stat calls in the usual case.
 if [ ! -d "$dstdir" ]; then
-defaultIFS='
-	'
-IFS="${IFS-$defaultIFS}"
+defaultIFS='	
+'
+IFS="${IFS-${defaultIFS}}"
 
-oIFS=$IFS
+oIFS="${IFS}"
 # Some sh's can't handle IFS=/ for some reason.
 IFS='%'
-set - `echo "$dstdir" | sed -e 's@/@%@g' -e 's@^%@/@'`
-IFS=$oIFS
+set - `echo ${dstdir} | sed -e 's@/@%@g' -e 's@^%@/@'`
+IFS="${oIFS}"
 
 pathcomp=''
 
 while [ $# -ne 0 ] ; do
-	pathcomp=$pathcomp$1
+	pathcomp="${pathcomp}${1}"
 	shift
 
-	if [ ! -d "$pathcomp" ] ;
+	if [ ! -d "${pathcomp}" ] ;
         then
-		$mkdirprog "$pathcomp"
+		$doit $mkdirprog "${pathcomp}"
+        	if [ x"$chowncmd" != x ]; then $doit $chowncmd "${pathcomp}"; else true ; fi &&
+        	if [ x"$chgrpcmd" != x ]; then $doit $chgrpcmd "${pathcomp}"; else true ; fi &&
+        	if [ x"$pathcompchmodcmd" != x ]; then $doit $pathcompchmodcmd "${pathcomp}"; else true ; fi
+
 	else
-		:
+		true
 	fi
 
-	pathcomp=$pathcomp/
+	pathcomp="${pathcomp}/"
 done
 fi
 
-if [ x"$dir_arg" != x ]
-then
-	$doit $instcmd "$dst" &&
-
-	if [ x"$chowncmd" != x ]; then $doit $chowncmd "$dst"; else : ; fi &&
-	if [ x"$chgrpcmd" != x ]; then $doit $chgrpcmd "$dst"; else : ; fi &&
-	if [ x"$stripcmd" != x ]; then $doit $stripcmd "$dst"; else : ; fi &&
-	if [ x"$chmodcmd" != x ]; then $doit $chmodcmd "$dst"; else : ; fi
-else
-
-# If we're going to rename the final executable, determine the name now.
-
-	if [ x"$transformarg" = x ]
+	if [ x"$dir_arg" != x ]
 	then
-		dstfile=`basename "$dst"`
+		if [ -d "$dstarg" ]; then
+			true
+		else
+			$doit $mkdirprog "$dstarg" &&
+
+			if [ x"$chowncmd" != x ]; then $doit $chowncmd "$dstarg"; else true ; fi &&
+			if [ x"$chgrpcmd" != x ]; then $doit $chgrpcmd "$dstarg"; else true ; fi &&
+			if [ x"$chmodcmd" != x ]; then $doit $chmodcmd "$dstarg"; else true ; fi
+		fi
 	else
-		dstfile=`basename "$dst" $transformbasename |
-			sed $transformarg`$transformbasename
-	fi
 
-# don't allow the sed command to completely eliminate the filename
+		if [ x"$dstisfile" = x ]
+		then
+			file=$srcarg
+		else
+			file=$dst
+		fi
 
-	if [ x"$dstfile" = x ]
-	then
-		dstfile=`basename "$dst"`
-	else
-		:
-	fi
+		dstfile=`basename "$file"`
+		dstfinal="$dstdir/$dstfile"
 
-# Make a couple of temp file names in the proper directory.
+# Make a temp file name in the proper directory.
 
-	dsttmp=$dstdir/_inst.$$_
-	rmtmp=$dstdir/_rm.$$_
+		dsttmp=$dstdir/#inst.$$#
 
-# Trap to clean up temp files at exit.
-
-	trap 'status=$?; rm -f "$dsttmp" "$rmtmp" && exit $status' 0
-	trap '(exit $?); exit' 1 2 13 15
+# Make a backup file name in the proper directory.
+		case x$suffixfmt in
+		*%*)	suffix=`echo x |
+			$awkprog -v bname="$dstfinal" -v fmt="$suffixfmt" '
+			{ cnt = 0;
+			  do {
+				sfx = sprintf(fmt, cnt++);
+				name = bname sfx;
+			  } while (system("test -f " name) == 0);
+			  print sfx; }' -`;;
+		x)	;;
+		*)	suffix="$suffixfmt";;
+		esac
+		dstbackup="$dstfinal$suffix"
 
 # Move or copy the file name to the temp name
 
-	$doit $instcmd "$src" "$dsttmp" &&
+		$doit $doinst $srcarg "$dsttmp" &&
+
+		trap "rm -f ${dsttmp}" 0 &&
 
 # and set any options; do chmod last to preserve setuid bits
 
@@ -257,38 +279,23 @@ else
 # ignore errors from any of these, just make sure not to ignore
 # errors from the above "$doit $instcmd $src $dsttmp" command.
 
-	if [ x"$chowncmd" != x ]; then $doit $chowncmd "$dsttmp"; else :;fi &&
-	if [ x"$chgrpcmd" != x ]; then $doit $chgrpcmd "$dsttmp"; else :;fi &&
-	if [ x"$stripcmd" != x ]; then $doit $stripcmd "$dsttmp"; else :;fi &&
-	if [ x"$chmodcmd" != x ]; then $doit $chmodcmd "$dsttmp"; else :;fi &&
-
-# Now remove or move aside any old file at destination location.  We try this
-# two ways since rm can't unlink itself on some systems and the destination
-# file might be busy for other reasons.  In this case, the final cleanup
-# might fail but the new file should still install successfully.
-
-{
-	if [ -f "$dstdir/$dstfile" ]
-	then
-		$doit $rmcmd -f "$dstdir/$dstfile" 2>/dev/null ||
-		$doit $mvcmd -f "$dstdir/$dstfile" "$rmtmp" 2>/dev/null ||
-		{
-		  echo "$0: cannot unlink or rename $dstdir/$dstfile" >&2
-		  (exit 1); exit
-		}
-	else
-		:
-	fi
-} &&
+		if [ x"$chowncmd" != x ]; then $doit $chowncmd "$dsttmp"; else true;fi &&
+		if [ x"$chgrpcmd" != x ]; then $doit $chgrpcmd "$dsttmp"; else true;fi &&
+		if [ x"$stripcmd" != x ]; then $doit $stripcmd $stripflags "$dsttmp"; else true;fi &&
+		if [ x"$chmodcmd" != x ]; then $doit $chmodcmd "$dsttmp"; else true;fi &&
 
 # Now rename the file to the real destination.
 
-	$doit $mvcmd "$dsttmp" "$dstdir/$dstfile"
+		if [ x"$suffix" != x ] && [ -f "$dstfinal" ]
+		then
+			$doit $mvcmd "$dstfinal" "$dstbackup"
+		else
+			$doit $rmcmd -f "$dstfinal"
+		fi &&
+		$doit $mvcmd "$dsttmp" "$dstfinal"
+	fi
 
-fi &&
+done &&
 
-# The final little trick to "correctly" pass the exit status to the exit trap.
 
-{
-	(exit 0); exit
-}
+exit 0

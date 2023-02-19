@@ -3,11 +3,12 @@ dnl
 dnl configure.in:
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(iotools, 2.2, stixpjr@gmail.com)
+AC_INIT([iotools],[2.2],[stixpjr@gmail.com])
 AC_REVISION($Revision: 1.7 $)dnl
 
-AC_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR(config)
+AM_INIT_AUTOMAKE
 
 dnl Version string
 AC_MSG_NOTICE([Configuring iotools $PACKAGE_VERSION])
@@ -27,8 +28,7 @@ else
 	AC_PROG_CC([gcc cc])
 fi
 AC_PROG_INSTALL
-AC_PROG_CC_STDC
-AC_AIX
+AC_USE_SYSTEM_EXTENSIONS
 
 if test $ac_cv_c_compiler_gnu = yes; then
 	CFLAGS="${CFLAGS} -Wall"
@@ -77,8 +77,6 @@ fi
 AC_CHECK_LIB(m, pow)
 
 dnl Checks for header files.
-AC_HEADER_STDC
-AC_HEADER_TIME
 AC_CHECK_HEADERS([ctype.h getopt.h errno.h fcntl.h inttypes.h limits.h sys/ioctl.h sys/time.h unistd.h])
 
 dnl Prefer largefile support
@@ -92,7 +90,7 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 dnl AC_C_VOLATILE
 AC_C_INLINE
-AC_TYPE_SIGNAL
+
 AC_CHECK_TYPES([long long, unsigned long long, int64_t])
 
 dnl Checks for library functions.
@@ -108,15 +106,15 @@ AC_CHECK_FUNCS([gettimeofday select strerror])
 
 dnl Check for some variables
 AC_MSG_CHECKING([for optarg declaration])
-AC_TRY_LINK([
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <stdlib.h>
 #include <unistd.h>
-    ], [
+    ]], [[
         char *X = optarg
-    ], [
+    ]])],[
         AC_MSG_RESULT(yes)
         HAVE_OPTARG_D=yes
-    ], [
+    ],[
         AC_MSG_RESULT(no)
     ])
 
@@ -129,7 +127,7 @@ can_printf_longlong=no
 if test $ac_cv_header_inttypes_h = yes -a $ac_cv_type_long_long = yes; then
 	dnl check for PRId64
 	AC_MSG_CHECKING([for PRId64])
-	AC_TRY_RUN([
+	AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdio.h>
 #include <inttypes.h>
 int main() {
@@ -137,48 +135,48 @@ int main() {
 	sprintf(buf, "%" PRId64, 4294967300LL);
 	return (strcmp(buf, "4294967300"));
 }
-	], [
+	]])],[
 		AC_MSG_RESULT(yes)
 		can_printf_longlong=yes
-	], [
+	],[
 		AC_MSG_RESULT(no)
-	], [ : ])
+	],[ : ])
 fi
 
 if test $can_printf_longlong = no -a $ac_cv_type_long_long = yes; then
 	dnl try %lld
 	AC_MSG_CHECKING([*printf() support for %lld])
-	AC_TRY_RUN([
+	AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdio.h>
 int main() {
 	char buf[100];
 	sprintf(buf, "%lld", 4294967300LL);
 	return (strcmp(buf, "4294967300"));
 }
-	], [
+	]])],[
 		AC_MSG_RESULT(yes)
 		AC_DEFINE([PRId64], ["lld"], printf supports lld)
 		can_printf_longlong=yes
-	], [
+	],[
 		AC_MSG_RESULT(no)
-	], [ : ])
+	],[ : ])
 
 	if test $can_printf_longlong != yes; then
 		AC_MSG_CHECKING([*printf() support for %qd])
-		AC_TRY_RUN([
+		AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdio.h>
 int main() {
 	char buf[100];
 	sprintf(buf, "%qd", 4294967300LL);
 	return (strcmp(buf, "4294967300"));
 }
-		], [
+		]])],[
 			AC_MSG_RESULT(yes)
 			can_printf_longlong=yes
 			AC_DEFINE([PRId64], ["qd"], printf supports qd)
-		], [
+		],[
 			AC_MSG_RESULT(no)
-		], [ : ])
+		],[ : ])
 	fi
 	if test $can_printf_longlong = no; then
 		AC_MSG_WARN(["lld" and "qd" not supported, defining PRId64 to "ld"])
@@ -186,4 +184,5 @@ int main() {
 	fi
 fi
 
-AC_OUTPUT(Makefile)
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
