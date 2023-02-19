@@ -296,7 +296,7 @@ usage()
 {
 	fprintf(stderr,
 		"fblckgen version " PACKAGE_VERSION ".\n"
-		"Copyright Paul Ripke $Date: 2008/09/17 10:51:24 $\n"
+		"Copyright Paul Ripke\n"
 #ifdef USE_PTHREADS
 		"Built to use pthreads.\n\n"
 #else   

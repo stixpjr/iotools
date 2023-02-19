@@ -524,7 +524,7 @@ usage()
 {
 	fprintf(stderr,
 		"iohammer version " PACKAGE_VERSION ".\n"
-		    "Copyright Paul Ripke $Date: 2013/03/13 03:58:35 $\n"
+		    "Copyright Paul Ripke\n"
 #ifdef USE_PTHREADS
 		"Built to use pthreads.\n\n"
 #else

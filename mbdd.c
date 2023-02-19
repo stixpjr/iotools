@@ -439,7 +439,7 @@ usage()
 {
 	fprintf(stderr,
 		"mbdd version " PACKAGE_VERSION ".\n"
-		    "Copyright Paul Ripke $Date: 2013/03/13 03:58:35 $\n"
+		    "Copyright Paul Ripke\n"
 		"Multi-buffer dd\n\n"
 		"Built to use pthreads.\n\n"
 		"Usage: mbdd [-b bytes] [-c count] [-n number] [-qs]\n\n"
